@@ -23,17 +23,18 @@ class MongoDBRepository(Repository):
     _instance: Optional['MongoDBRepository'] = None
 
     def __new__(cls, *args, **kwargs):
-        # Ensures that only one instance of MongoDBRepository exists
-        if not cls._instance:
+        """Ensure that only one instance of MongoDBRepository exists."""
+        if cls._instance is None:
             cls._instance = super(MongoDBRepository, cls).__new__(cls, *args, **kwargs)
-            cls._instance.__init_mongo_client()
+            cls.__init_mongo_client()  # Initialize MongoDB client
         return cls._instance
 
-    def __init_mongo_client(self):
-        self._client:MongoClient = MongoClient(CONNECTION_STRING)
-        self._messages_db:Database = self._client["messages"]
-        self._messages_collection:Collection = self._messages_db["comments"]
-        self._messages_collection.create_index(
+    @classmethod
+    def __init_mongo_client(cls):
+        cls._client:MongoClient = MongoClient(CONNECTION_STRING)
+        cls._messages_db:Database = cls._client["messages"]
+        cls._messages_collection:Collection = cls._messages_db["comments"]
+        cls._messages_collection.create_index(
         [("reply_to_message_id", 1)],
             partialFilterExpression={"reply_to_message_id": {"$eq": None}}
         )

@@ -1,11 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 from src.database.odm_blog import Message, Post
+
+SERVER_REPOSITORY:Optional['Repository'] = None
+SANITY_POSTS_LIMIT = 20
 
 class Repository(ABC):
 
     @abstractmethod
-    def get_posts_blog(self, start_index:int = 0, posts_limit:int = -1)->List[Post]:
+    def get_posts_blog(self, start_index:int = 0, posts_limit:int = SANITY_POSTS_LIMIT)->List[Post]:
         pass
 
     @abstractmethod
