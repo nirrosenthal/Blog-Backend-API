@@ -13,7 +13,7 @@ class ResourceNotFoundError(BlogAppException):
         self.error_code = 404
         super().__init__(self.message, self.error_code)
 
-class ValidationError(BlogAppException):
+class InputValidationError(BlogAppException):
     """Raised for input validation failures"""
     def __init__(self, message="Validation failed"):
         self.message = message
@@ -40,7 +40,6 @@ class ForbiddenError(BlogAppException):
         self.message = message
         self.error_code = 403
         super().__init__(self.message, self.error_code)
-
 
 class TimeoutError(BlogAppException):
     """Raised when the timeout for a request has passed"""
