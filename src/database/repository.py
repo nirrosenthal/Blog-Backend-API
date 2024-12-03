@@ -1,57 +1,36 @@
 from abc import ABC, abstractmethod
 from typing import List
-from src.database.odm_blog import Post,Comment, User
+from src.database.odm_blog import Message, Post
 
 class Repository(ABC):
 
+
+
     @abstractmethod
-    def get_posts_blog(self, start_index:int =0, posts_limit:int = 50)->List[Post]:
+    def get_posts_blog(self, start_index:int = 0, posts_limit:int = -1)->List[Post]:
         pass
 
     @abstractmethod
-    def get_post_blog(self, post_id:str)->Post:
+    def get_message_blog(self, message_id:str, user_id_owner:str='')->Message:
         pass
 
     @abstractmethod
-    def create_post_blog(self, content:str, user_id_owner: str)->Post:
+    def create_message_blog(self, content:str, user_id_owner: str, reply_to)->Message:
         pass
 
     @abstractmethod
-    def edit_post_blog(self, post_id: str, new_content:str, user_id_owner: str)->Post:
+    def edit_message_blog(self, message_id: str, edited_content:str)->Message:
         pass
 
     @abstractmethod
-    def delete_post_blog(self, post_id:str, user_id_owner: str)->Post:
+    def delete_message_blog(self, message_id:str)->Message:
+        pass
+
+
+    @abstractmethod
+    def add_message_like(self, message_id:str, user_id:str)->bool:
         pass
 
     @abstractmethod
-    def get_comment_blog(self, comment_id:str)->Comment:
-        pass
-
-    @abstractmethod
-    def create_comment_blog(self, content:str, reply_to_message_id:str, user_id_owner:str)->Comment:
-        pass
-
-    @abstractmethod
-    def edit_comment_blog(self, comment_id:str, new_content: str, user_id_owner: str)->Comment:
-        pass
-
-    @abstractmethod
-    def delete_comment_blog(self, comment_id:str, user_id_owner: str)->Comment:
-        pass
-
-    @abstractmethod
-    def add_post_like(self, post_id:str, user_id:str)->bool:
-        pass
-
-    @abstractmethod
-    def remove_post_like(self, post_id:str, user_id:str)->bool:
-        pass
-
-    @abstractmethod
-    def add_comment_like(self, comment_id:str, user_id:str)->bool:
-        pass
-
-    @abstractmethod
-    def remove_comment_like(self, comment_id:str, user_id:str)->bool:
+    def remove_message_like(self, message_id:str, user_id:str)->bool:
         pass

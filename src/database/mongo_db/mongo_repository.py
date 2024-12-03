@@ -1,9 +1,9 @@
 from pymongo.synchronous.collection import Collection
 from pymongo.synchronous.database import Database
 
-from src.database.odm_blog import Post,Comment
+from src.database.odm_blog import Post, Comment, Message
 from src.database.repository import Repository
-from typing import List
+from typing import List, Mapping, Optional
 from pymongo import MongoClient
 from bson import ObjectId
 
@@ -19,178 +19,143 @@ MONGO_HOST = "localhost"
 CONNECTION_STRING = f"mongodb://{READ_WRITE_USER}:{READ_WRITE_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/"
 
 class MongoDBRepository(Repository):
+    _instance: Optional['MongoDBRepository'] = None
 
-    def __init__(self):
+    def __new__(cls, *args, **kwargs):
+        # Ensures that only one instance of MongoDBRepository exists
+        if not cls._instance:
+            cls._instance = super(MongoDBRepository, cls).__new__(cls, *args, **kwargs)
+            cls._instance.__init_mongo_client()
+        return cls._instance
+
+    def __init_mongo_client(self):
         self._client:MongoClient = MongoClient(CONNECTION_STRING)
         self._messages_db:Database = self._client["messages"]
-        self._posts_collection:Collection = self._messages_db["posts"]
-        self._comments_collection:Collection = self._messages_db["comments"]
-        self._users_db:Database = self._client["users"]
-        self._comments_collection.create_index(
+        self._messages_collection:Collection = self._messages_db["comments"]
+        self._messages_collection.create_index(
         [("reply_to_message_id", 1)],
-            partialFilterExpression={"reply_to_message_id": {"$exists": True}}
-            )
+            partialFilterExpression={"reply_to_message_id": {"$eq": None}}
+        )
+
+    # def __init__(self):
+    #     self._client:MongoClient = MongoClient(CONNECTION_STRING)
+    #     self._messages_db:Database = self._client["messages"]
+    #     self._messages_collection:Collection = self._messages_db["comments"]
+    #     self._messages_collection.create_index(
+    #     [("reply_to_message_id", 1)],
+    #         partialFilterExpression={"reply_to_message_id": {"$ne": None}}
+    #         )
 
     @staticmethod
-    def _create_post_with_post_data(post_data:dict)->Post:
-        return Post(post_id=str(post_data["_id"]), content=post_data["content"],
-                    user_id_owner=post_data["user_id_owner"],
-                    user_likes=post_data["user_likes"])
+    def __message_data_to_message_object(message_data:Mapping[str,any])->Message:
+        if message_data["reply_to_message_id"] is None:
+            return MongoDBRepository.__message_data_to_post_object(message_data)
+        else:
+            return MongoDBRepository.__message_data_to_comment_object(message_data)
 
     @staticmethod
-    def _create_comment_with_comment_data(comment_data:dict)->Comment:
-        return Comment(comment_id=str(comment_data["_id"]), content=comment_data["content"],
-                user_id_owner=comment_data["user_id_owner"],
-                user_likes=comment_data["user_likes"],
-                reply_to_message_id=str(comment_data["reply_to_message_id"]))
+    def __message_data_to_post_object(message_data:Mapping[str,any])->Post:
+        return Post(message_id=str(message_data["_id"]), content=message_data["content"],
+                    user_id_owner=message_data["user_id_owner"],
+                    user_likes=message_data["user_likes"])
+
+    @staticmethod
+    def __message_data_to_comment_object(message_data:Mapping[str,any])->Comment:
+        return Comment(message_id=str(message_data["_id"]), content=message_data["content"],
+                user_id_owner=message_data["user_id_owner"],
+                user_likes=message_data["user_likes"],
+                reply_to_message_id=str(message_data["reply_to_message_id"]))
 
     def get_posts_blog(self, start_index:int =0, posts_limit:int = 50)->List[Post]:
-        posts = self._posts_collection.find().skip(start_index).limit(posts_limit)
-        posts_objects:List[Post] = [MongoDBRepository._create_post_with_post_data(post_data) for post_data in posts]
+        query = {"reply_to_message_id": {"$eq": None}}
+        posts = self._messages_collection.find(query).skip(start_index).limit(posts_limit)
+        posts_objects:List[Post] = [MongoDBRepository.__message_data_to_post_object(post_data) for post_data in posts]
         return posts_objects
 
 
-    def get_post_blog(self, post_id:str) ->Post:
-        post_data = self._posts_collection.find_one({"_id": ObjectId(post_id)})
-        return MongoDBRepository._create_post_with_post_data(post_data)
+    def get_message_blog(self, message_id:str, user_id_owner:str='') ->Message:
+        filter_criteria:dict = {"_id": ObjectId(message_id)}
+        if user_id_owner!='':
+            filter_criteria["user_id_owner"] = user_id_owner
+
+        message_data:Mapping[str,any] = self._messages_collection.find_one(filter_criteria)
+        if message_data is None:
+            raise Exception("message not exist")
+
+        return MongoDBRepository.__message_data_to_message_object(message_data)
 
 
-    def create_post_blog(self, content:str, user_id_owner: str)->Post:
-        new_post = {
+    def create_message_blog(self, content:str, reply_to_message_id:str, user_id_owner:str)->Message:
+        new_message = {
             "content": content,
             "user_id_owner": user_id_owner,
             "user_likes": [],
+            "reply_to_message_id": None if reply_to_message_id =='' else ObjectId(reply_to_message_id)
         }
 
-        created_post_result = self._posts_collection.insert_one(new_post)
-        post_data = self._posts_collection.find_one({"_id": created_post_result.inserted_id})
+        created_message_result = self._messages_collection.insert_one(new_message)
+        created_message_data = self._messages_collection.find_one({"_id": created_message_result.inserted_id})
+        return MongoDBRepository.__message_data_to_message_object(created_message_data)
 
-        return MongoDBRepository._create_post_with_post_data(post_data)
 
-
-    def edit_post_blog(self, post_id: str, new_content:str, user_id_owner: str)->Post:
-        post_id_obj = ObjectId(post_id)
-        self._posts_collection.update_one({"_id": post_id_obj},
+    def edit_message_blog(self, message_id: str, new_content:str)->Message:
+        message_id_obj:ObjectId = ObjectId(message_id)
+        self._messages_collection.update_one({"_id": message_id_obj},
                                            {"$set": {"content": new_content}})
 
-        edited_post_data = self._posts_collection.find_one({"_id": post_id_obj})
-        return MongoDBRepository._create_post_with_post_data(edited_post_data)
+        edited_message_data = self._messages_collection.find_one({"_id": message_id_obj})
+        return MongoDBRepository.__message_data_to_message_object(edited_message_data)
 
 
-    def delete_post_blog(self, post_id:str, user_id_owner: str)->Post:
-        post_id_obj = ObjectId(post_id)
-        post_to_delete = self._posts_collection.find_one({"_id": post_id_obj})
-        reply_comments_to_delete = self._comments_collection.find({"reply_to_message_id": post_id_obj})
-        for comment in reply_comments_to_delete:
-            self.delete_comment_blog(comment["_id"], comment["user_id_owner"])
+    def delete_message_blog(self, message_id:str)->Message:
+        message_to_delete:Message = self.get_message_blog(message_id)
+        reply_comments_to_delete = self._messages_collection.find({"reply_to_message_id": ObjectId(message_id)})
+        for comment_data in reply_comments_to_delete:
+            self.delete_message_blog(comment_data["_id"])
 
-        self._posts_collection.delete_one({"_id": post_id_obj})
+        self._messages_collection.delete_one({"_id": ObjectId(message_id)})
 
-        return MongoDBRepository._create_post_with_post_data(post_to_delete)
-
-
-    def get_comment_blog(self, comment_id:str) ->Comment:
-        comment_data = self._comments_collection.find_one({"_id": ObjectId(comment_id)})
-        return MongoDBRepository._create_comment_with_comment_data(comment_data)
+        return message_to_delete
 
 
-    def create_comment_blog(self, content:str, reply_to_message_id:str, user_id_owner:str)->Comment:
-        new_comment = {
-            "content": content,
-            "user_id_owner": user_id_owner,
-            "user_likes": [],
-            "reply_to_message_id": ObjectId(reply_to_message_id)
-        }
-
-        created_comment_result = self._comments_collection.insert_one(new_comment)
-        comment_data = self._comments_collection.find_one({"_id": created_comment_result.inserted_id})
-        return MongoDBRepository._create_comment_with_comment_data(comment_data)
-
-
-    def edit_comment_blog(self, comment_id:str, new_content: str, user_id_owner: str)->Comment:
-        comment_id_obj = ObjectId(comment_id)
-        self._comments_collection.update_one({"_id": comment_id_obj},
-                                           {"$set": {"content": new_content}})
-
-        edited_comment_data = self._comments_collection.find_one({"_id": comment_id_obj})
-        return MongoDBRepository._create_comment_with_comment_data(edited_comment_data)
-
-
-    def delete_comment_blog(self, comment_id:str, user_id_owner: str)->Comment:
-        comment_id_obj = ObjectId(comment_id)
-        comment_to_delete = self._comments_collection.find_one({"_id": comment_id_obj})
-        reply_comments_to_delete = self._comments_collection.find({"reply_to_message_id": comment_id_obj})
-        for comment in reply_comments_to_delete:
-            self.delete_comment_blog(comment["_id"], comment["user_id_owner"])
-
-        self._comments_collection.delete_one({"_id": comment_id_obj})
-
-        return MongoDBRepository._create_comment_with_comment_data(comment_to_delete)
-
-
-    @staticmethod
-    def _add_message_like(collection:Collection, message_id:str, user_id: str)->bool:
+    def add_message_like(self, message_id: str, user_id: str) -> bool:
         message_id_obj = ObjectId(message_id)
-        message = collection.find_one({"_id": message_id_obj})
-
-        if not message or user_id in message.get("user_likes", []):
-            return False
-
-        collection.update_one(
+        operation_result = self._messages_collection.update_one(
             {"_id": message_id_obj},
             {"$push": {"user_likes": user_id}}
         )
         return True
 
-    @staticmethod
-    def _remove_message_like(collection:Collection, message_id:str, user_id:str)->bool:
+
+    def remove_message_like(self, message_id: str, user_id: str) -> bool:
         message_id_obj = ObjectId(message_id)
-        message = collection.find_one({"_id": message_id_obj})
-
-        if not message or user_id not in message.get("user_likes", []):
-            return False
-
-        collection.update_one(
+        operation_result = self._messages_collection.update_one(
             {"_id": message_id_obj},
             {"$pull": {"user_likes": user_id}}
         )
         return True
 
 
-    def add_post_like(self, message_id: str, user_id: str) -> bool:
-        return MongoDBRepository._add_message_like(self._posts_collection, message_id, user_id)
-
-
-    def remove_post_like(self, message_id: str, user_id: str) -> bool:
-        return MongoDBRepository._remove_message_like(self._posts_collection, message_id, user_id)
-
-
-    def add_comment_like(self, message_id: str, user_id: str) -> bool:
-        return MongoDBRepository._add_message_like(self._comments_collection, message_id, user_id)
-
-
-    def remove_comment_like(self, message_id: str, user_id: str) -> bool:
-        return MongoDBRepository._remove_message_like(self._comments_collection, message_id, user_id)
-
-
 
 if __name__=="__main__":
     mongo = MongoDBRepository()
     for post in mongo.get_posts_blog(0,20):
-        mongo.delete_post_blog(post.post_id,post.user_id_owner)
-    first_post:Post = mongo.create_post_blog("my very first post", "first_user")
-    b1 = mongo.add_post_like(first_post.post_id,"second_user")
-    updated_post = mongo.get_post_blog(first_post.post_id)
+        mongo.delete_message_blog(post.message_id)
+    print("posts deleted")
+    first_post:Message = mongo.create_message_blog("my very first post", '', "first_user")
+    print(first_post.content)
+    b1 = mongo.add_message_like(first_post.message_id,"second_user")
+    updated_post = mongo.get_message_blog(first_post.message_id)
     print(updated_post.user_likes)
-    b2 = mongo.remove_post_like(first_post.post_id, "second_user")
+    b2 = mongo.remove_message_like(first_post.message_id, "second_user")
     if not (b1 and b2):
         print("like didn't work")
 
-    print(mongo.get_posts_blog(0,20))
-    mongo.create_post_blog("second message", "first user")
-    print(mongo.get_posts_blog(0,20))
-    print(mongo.get_posts_blog(1, 20))
-    updated_post = mongo.get_post_blog(first_post.post_id)
+    print(len(mongo.get_posts_blog(0,20)))
+    mongo.create_message_blog("second message", '',"first user")
+    print(len(mongo.get_posts_blog(0,20)))
+    print(len(mongo.get_posts_blog(1, 20)))
+    updated_post = mongo.get_message_blog(first_post.message_id)
     print(updated_post.user_likes)
-    mongo.delete_post_blog(first_post.post_id,user_id_owner=first_post.user_id_owner)
-    mongo.get_post_blog(first_post.post_id) ## expected error
+    mongo.delete_message_blog(first_post.message_id)
+    mongo.get_message_blog(first_post.message_id) ## expected error
