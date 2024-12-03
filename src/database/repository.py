@@ -4,8 +4,6 @@ from src.database.odm_blog import Message, Post
 
 class Repository(ABC):
 
-
-
     @abstractmethod
     def get_posts_blog(self, start_index:int = 0, posts_limit:int = -1)->List[Post]:
         pass
