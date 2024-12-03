@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List
-from odm_blog import Post,Comment, User
+from src.database.odm_blog import Post,Comment, User
 
 class Repository(ABC):
 
