@@ -5,7 +5,7 @@ from src.database.odm_blog import Post,Comment, User
 class Repository(ABC):
 
     @abstractmethod
-    def get_posts_blog(self, start_id:int =0, posts_limit:int = 50)->List[Post]:
+    def get_posts_blog(self, start_index:int =0, posts_limit:int = 50)->List[Post]:
         pass
 
     @abstractmethod

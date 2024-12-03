@@ -44,8 +44,10 @@ class MongoDBRepository(Repository):
                 user_likes=comment_data["user_likes"],
                 reply_to_message_id=str(comment_data["reply_to_message_id"]))
 
-    def get_posts_blog(self, start_id:int =0, posts_limit:int = 50)->List[Post]:
-        pass
+    def get_posts_blog(self, start_index:int =0, posts_limit:int = 50)->List[Post]:
+        posts = self._posts_collection.find().skip(start_index).limit(posts_limit)
+        posts_objects:List[Post] = [MongoDBRepository._create_post_with_post_data(post_data) for post_data in posts]
+        return posts_objects
 
 
     def get_post_blog(self, post_id:str) ->Post:
@@ -174,6 +176,8 @@ class MongoDBRepository(Repository):
 
 if __name__=="__main__":
     mongo = MongoDBRepository()
+    for post in mongo.get_posts_blog(0,20):
+        mongo.delete_post_blog(post.post_id,post.user_id_owner)
     first_post:Post = mongo.create_post_blog("my very first post", "first_user")
     b1 = mongo.add_post_like(first_post.post_id,"second_user")
     updated_post = mongo.get_post_blog(first_post.post_id)
@@ -182,6 +186,10 @@ if __name__=="__main__":
     if not (b1 and b2):
         print("like didn't work")
 
+    print(mongo.get_posts_blog(0,20))
+    mongo.create_post_blog("second message", "first user")
+    print(mongo.get_posts_blog(0,20))
+    print(mongo.get_posts_blog(1, 20))
     updated_post = mongo.get_post_blog(first_post.post_id)
     print(updated_post.user_likes)
     mongo.delete_post_blog(first_post.post_id,user_id_owner=first_post.user_id_owner)
