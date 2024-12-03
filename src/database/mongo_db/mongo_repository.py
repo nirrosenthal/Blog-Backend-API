@@ -1,6 +1,7 @@
+from pymongo.results import UpdateResult, InsertOneResult
 from pymongo.synchronous.collection import Collection
 from pymongo.synchronous.database import Database
-
+from src.server.flask_server.exceptions import ResourceNotFoundError, DatabaseError
 from src.database.odm_blog import Post, Comment, Message
 from src.database.repository import Repository
 from typing import List, Mapping, Optional
@@ -37,15 +38,6 @@ class MongoDBRepository(Repository):
             partialFilterExpression={"reply_to_message_id": {"$eq": None}}
         )
 
-    # def __init__(self):
-    #     self._client:MongoClient = MongoClient(CONNECTION_STRING)
-    #     self._messages_db:Database = self._client["messages"]
-    #     self._messages_collection:Collection = self._messages_db["comments"]
-    #     self._messages_collection.create_index(
-    #     [("reply_to_message_id", 1)],
-    #         partialFilterExpression={"reply_to_message_id": {"$ne": None}}
-    #         )
-
     @staticmethod
     def __message_data_to_message_object(message_data:Mapping[str,any])->Message:
         if message_data["reply_to_message_id"] is None:
@@ -67,22 +59,33 @@ class MongoDBRepository(Repository):
                 reply_to_message_id=str(message_data["reply_to_message_id"]))
 
     def get_posts_blog(self, start_index:int =0, posts_limit:int = 50)->List[Post]:
-        query = {"reply_to_message_id": {"$eq": None}}
-        posts = self._messages_collection.find(query).skip(start_index).limit(posts_limit)
-        posts_objects:List[Post] = [MongoDBRepository.__message_data_to_post_object(post_data) for post_data in posts]
-        return posts_objects
+        try:
+            query = {"reply_to_message_id": {"$eq": None}}
+            posts = self._messages_collection.find(query).skip(start_index).limit(posts_limit)
+            posts_objects:List[Post] = [MongoDBRepository.__message_data_to_post_object(post_data) for post_data in posts]
+            return posts_objects
+        except Exception as e:
+            raise DatabaseError(str(e))
 
 
     def get_message_blog(self, message_id:str, user_id_owner:str='') ->Message:
         filter_criteria:dict = {"_id": ObjectId(message_id)}
         if user_id_owner!='':
             filter_criteria["user_id_owner"] = user_id_owner
+        try:
+            message_data:Mapping[str,any] = self._messages_collection.find_one(filter_criteria)
 
-        message_data:Mapping[str,any] = self._messages_collection.find_one(filter_criteria)
-        if message_data is None:
-            raise Exception("message not exist")
+            if message_data is None:
+                raise ResourceNotFoundError
 
-        return MongoDBRepository.__message_data_to_message_object(message_data)
+            return MongoDBRepository.__message_data_to_message_object(message_data)
+        except ResourceNotFoundError:
+                if user_id_owner!='':
+                  raise ResourceNotFoundError(f"Message ID {message_id} with user_id_owner {user_id_owner} not found")
+                raise ResourceNotFoundError(f"Message ID {message_id} not found")
+        except Exception as e:
+            raise DatabaseError(str(e))
+
 
 
     def create_message_blog(self, content:str, reply_to_message_id:str, user_id_owner:str)->Message:
@@ -92,48 +95,88 @@ class MongoDBRepository(Repository):
             "user_likes": [],
             "reply_to_message_id": None if reply_to_message_id =='' else ObjectId(reply_to_message_id)
         }
-
-        created_message_result = self._messages_collection.insert_one(new_message)
-        created_message_data = self._messages_collection.find_one({"_id": created_message_result.inserted_id})
-        return MongoDBRepository.__message_data_to_message_object(created_message_data)
-
+        try:
+            insert_one_result:InsertOneResult = self._messages_collection.insert_one(new_message)
+            created_message_data = self._messages_collection.find_one({"_id": insert_one_result.inserted_id})
+            return MongoDBRepository.__message_data_to_message_object(created_message_data)
+        except ResourceNotFoundError:
+            raise ResourceNotFoundError
+        except Exception as e:
+            raise DatabaseError(str(e))
 
     def edit_message_blog(self, message_id: str, new_content:str)->Message:
         message_id_obj:ObjectId = ObjectId(message_id)
-        self._messages_collection.update_one({"_id": message_id_obj},
+        try:
+            update_result:UpdateResult = self._messages_collection.update_one({"_id": message_id_obj},
                                            {"$set": {"content": new_content}})
-
-        edited_message_data = self._messages_collection.find_one({"_id": message_id_obj})
-        return MongoDBRepository.__message_data_to_message_object(edited_message_data)
+            if update_result.matched_count == 0:
+                raise ResourceNotFoundError(f"Message ID {message_id} not found")
+            if update_result.modified_count == 0:
+                raise DatabaseError(f"Edit message ID {message_id} fail")
+            edited_message_data = self._messages_collection.find_one({"_id": message_id_obj})
+            return MongoDBRepository.__message_data_to_message_object(edited_message_data)
+        except ResourceNotFoundError or DatabaseError as e:
+            raise e
+        except Exception as e:
+            raise DatabaseError(str(e))
 
 
     def delete_message_blog(self, message_id:str)->Message:
         message_to_delete:Message = self.get_message_blog(message_id)
-        reply_comments_to_delete = self._messages_collection.find({"reply_to_message_id": ObjectId(message_id)})
-        for comment_data in reply_comments_to_delete:
-            self.delete_message_blog(comment_data["_id"])
+        try:
+            reply_comments_to_delete = self._messages_collection.find({"reply_to_message_id": ObjectId(message_id)})
+            if reply_comments_to_delete is None:
+                raise ResourceNotFoundError(f"Message ID {message_id} not found")
 
-        self._messages_collection.delete_one({"_id": ObjectId(message_id)})
+            for comment_data in reply_comments_to_delete:
+                self.delete_message_blog(comment_data["_id"])
 
-        return message_to_delete
+            delete_result = self._messages_collection.delete_one({"_id": ObjectId(message_id)})
+            if delete_result.deleted_count == 0:
+                raise DatabaseError(f"Delete Message ID {message_id} fail")
+
+            return message_to_delete
+        except DatabaseError or ResourceNotFoundError as e:
+            raise e
+        except Exception as e:
+            raise DatabaseError(str(e))
 
 
     def add_message_like(self, message_id: str, user_id: str) -> bool:
         message_id_obj = ObjectId(message_id)
-        operation_result = self._messages_collection.update_one(
-            {"_id": message_id_obj},
-            {"$push": {"user_likes": user_id}}
-        )
-        return True
+        try:
+            update_result:UpdateResult = self._messages_collection.update_one(
+                {"_id": message_id_obj},
+                {"$push": {"user_likes": user_id}}
+            )
+            if update_result.matched_count == 0:
+                raise ResourceNotFoundError(f"Message ID {message_id} not found")
+            if update_result.modified_count == 0:
+                raise DatabaseError(f"Edit message ID {message_id} fail")
 
+            return True
+        except ResourceNotFoundError or DatabaseError as e:
+            raise e
+        except Exception as e:
+            raise DatabaseError(str(e))
 
     def remove_message_like(self, message_id: str, user_id: str) -> bool:
         message_id_obj = ObjectId(message_id)
-        operation_result = self._messages_collection.update_one(
-            {"_id": message_id_obj},
-            {"$pull": {"user_likes": user_id}}
-        )
-        return True
+        try:
+            update_result:UpdateResult = self._messages_collection.update_one(
+                {"_id": message_id_obj},
+                {"$pull": {"user_likes": user_id}}
+            )
+            if update_result.matched_count == 0:
+                raise ResourceNotFoundError(f"Message ID {message_id} not found")
+            if update_result.modified_count == 0:
+                raise DatabaseError(f"Edit message ID {message_id} fail")
+
+            return True
+        except ResourceNotFoundError or DatabaseError as e:
+            raise e
+        except Exception as e:
+            raise DatabaseError(str(e))
 
 
 
