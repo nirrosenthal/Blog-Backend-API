@@ -1,4 +1,4 @@
-from ..odm_blog import Post,Comment,User
+from ..odm_blog import Post,Comment
 from ..repository import Repository
 from typing import List
 from pymongo import MongoClient
@@ -41,6 +41,12 @@ class MongoDBRepository(Repository):
     def get_posts_blog(self)->List[Post]:
         pass
 
+
+    def get_post_blog(self, post_id:str) ->Post:
+        post_data = self._messages_db.find_one({"_id": ObjectId(post_id)})
+        return MongoDBRepository._create_post_with_post_data(post_data)
+
+
     def create_post_blog(self, content:str, user_id_owner: str)->Post:
         new_post = {
             "content": content,
@@ -73,6 +79,12 @@ class MongoDBRepository(Repository):
         self._messages_db.delete_one({"_id": post_id_obj})
 
         return MongoDBRepository._create_post_with_post_data(post_to_delete)
+
+
+    def get_comment_blog(self, comment_id:str) ->Comment:
+        comment_data = self._messages_db.find_one({"_id": ObjectId(comment_id)})
+        return MongoDBRepository._create_comment_with_comment_data(comment_data)
+
 
     def create_comment_blog(self, content:str, reply_to_message_id:str, user_id_owner:str)->Comment:
         new_comment = {
@@ -119,7 +131,6 @@ class MongoDBRepository(Repository):
             {"_id": message_id_obj},
             {"$push": {"user_likes": user_id}}
         )
-
         return True
 
 

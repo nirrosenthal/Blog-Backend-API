@@ -9,14 +9,23 @@ class Repository(ABC):
         pass
 
     @abstractmethod
+    def get_post_blog(self, post_id:str)->Post:
+        pass
+
+    @abstractmethod
     def create_post_blog(self, content:str, user_id_owner: str)->Post:
         pass
 
+    @abstractmethod
     def edit_post_blog(self, post_id: str, new_content:str, user_id_owner: str)->Post:
         pass
 
     @abstractmethod
     def delete_post_blog(self, post_id:str, user_id_owner: str)->Post:
+        pass
+
+    @abstractmethod
+    def get_comment_blog(self, comment_id:str)->Comment:
         pass
 
     @abstractmethod
