@@ -5,7 +5,7 @@ from src.database.odm_blog import Post,Comment, User
 class Repository(ABC):
 
     @abstractmethod
-    def get_posts_blog(self)->List[Post]:
+    def get_posts_blog(self, start_id:int =0, posts_limit:int = 50)->List[Post]:
         pass
 
     @abstractmethod
@@ -40,11 +40,18 @@ class Repository(ABC):
     def delete_comment_blog(self, comment_id:str, user_id_owner: str)->Comment:
         pass
 
-    ### what should I return from these messages
     @abstractmethod
-    def add_message_like(self, message_id:str, user_id:str)->bool:
+    def add_post_like(self, post_id:str, user_id:str)->bool:
         pass
 
     @abstractmethod
-    def remove_message_like(self, message_id:str, user_id:str)->bool:
+    def remove_post_like(self, post_id:str, user_id:str)->bool:
+        pass
+
+    @abstractmethod
+    def add_comment_like(self, comment_id:str, user_id:str)->bool:
+        pass
+
+    @abstractmethod
+    def remove_comment_like(self, comment_id:str, user_id:str)->bool:
         pass
