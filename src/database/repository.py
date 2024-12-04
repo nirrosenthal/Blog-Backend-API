@@ -1,14 +1,13 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
-from src.database.odm_blog import Message, Post
+from src.database.odm_blog import Message, Post, User
 
 SERVER_REPOSITORY:Optional['Repository'] = None
-SANITY_POSTS_LIMIT = 20
 
 class Repository(ABC):
 
     @abstractmethod
-    def get_posts_blog(self, start_index:int = 0, posts_limit:int = SANITY_POSTS_LIMIT)->List[Post]:
+    def get_posts_blog(self, posts_limit:int, start_index:int = 0, **kwargs)->List[Post]:
         pass
 
     @abstractmethod
@@ -34,4 +33,20 @@ class Repository(ABC):
 
     @abstractmethod
     def remove_message_like(self, message_id:str, user_id:str)->bool:
+        pass
+
+    @abstractmethod
+    def create_user_blog(self, user_id: str, name:str, roles:list[str])->User:
+        pass
+
+    @abstractmethod
+    def get_user_blog(self, user_id:str)->User:
+        pass
+
+    @abstractmethod
+    def update_user_blog(self, user_id)->User:
+        pass
+
+    @abstractmethod
+    def delete_user_blog(self, user_id:str)->User:
         pass
