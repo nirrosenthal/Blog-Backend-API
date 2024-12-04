@@ -49,7 +49,7 @@ def edit_message_blog():
     message_id = request.get_json().get('message_id','')
     content = request.get_json().get('content','')
     try:
-        Input_Validation.MessageEditRequest(message_id=message_id, content=content)
+        Input_Validation.MessageEditRequest(message_id={"message_id":message_id}, content=content)
         edited_message:Message = repository.SERVER_REPOSITORY.edit_message_blog(message_id, content)
 
         return jsonify(asdict(edited_message)), 200
@@ -62,7 +62,7 @@ def edit_message_blog():
 def delete_message_blog():
     message_id = request.get_json().get('message_id','')
     try:
-        Input_Validation.MessageDeleteRequest(message_id)
+        Input_Validation.MessageDeleteRequest(message_id={"message_id":message_id})
         deleted_message:Message = repository.SERVER_REPOSITORY.delete_message_blog(message_id)
         return jsonify(asdict(deleted_message)), 200
     except ValidationError as e:
@@ -74,9 +74,9 @@ def add_message_like():
     message_id = request.get_json().get('message_id','')
     user_id = "need to get curr user id"
     try:
-        Input_Validation.MessageLikeRequest(message_id,user_id)
+        Input_Validation.MessageLikeRequest(message_id={"message_id":message_id},user_id=user_id)
         repository.SERVER_REPOSITORY.add_message_like(message_id, user_id)
-        return make_response('', 204)
+        return make_response(f'User {user_id} Like Added', 204)
     except ValidationError as e:
         raise InputValidationError(str(e))
 
@@ -84,11 +84,11 @@ def add_message_like():
 @messages_bp.route('like/remove', methods=['PUT'])
 def remove_message_like():
     message_id = request.get_json().get('message_id','')
-    user_id = "need to get curr user id"
+    user_id = "NEED_TO_FIX"
     try:
-        Input_Validation.MessageLikeRequest(message_id,user_id)
+        Input_Validation.MessageLikeRequest(message_id={"message_id":message_id},user_id=user_id)
         repository.SERVER_REPOSITORY.remove_message_like(message_id, user_id)
-        return make_response('', 204)
+        return make_response(f'User {user_id} Like Removed', 204)
     except ValidationError as e:
         raise InputValidationError(str(e))
 
