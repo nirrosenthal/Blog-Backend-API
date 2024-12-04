@@ -1,8 +1,8 @@
 from pymongo.results import UpdateResult, InsertOneResult
 from pymongo.synchronous.collection import Collection
 from pymongo.synchronous.database import Database
-from src.server.flask_server.exceptions import ResourceNotFoundError, DatabaseError
-from src.database.odm_blog import Post, Comment, Message
+from src.server.flask_server.exceptions import ResourceNotFoundError, DatabaseError, BlogAppException
+from src.database.odm_blog import Post, Comment, Message, User
 from src.database.repository import Repository
 from typing import List, Mapping, Optional
 from pymongo import MongoClient
@@ -33,11 +33,14 @@ class MongoDBRepository(Repository):
     def __init_mongo_client(cls):
         cls._client:MongoClient = MongoClient(CONNECTION_STRING)
         cls._messages_db:Database = cls._client["messages"]
+        cls._users_db:Database = cls._client["users"]
         cls._messages_collection:Collection = cls._messages_db["comments"]
         cls._messages_collection.create_index(
         [("reply_to_message_id", 1)],
             partialFilterExpression={"reply_to_message_id": {"$eq": None}}
         )
+        cls._users_collection:Collection = cls._users_db["users"]
+        cls._users_collection.create_index("user_id", unique=True)
 
     @staticmethod
     def __message_data_to_message_object(message_data:Mapping[str,any])->Message:
@@ -59,14 +62,15 @@ class MongoDBRepository(Repository):
                 user_likes=message_data["user_likes"],
                 reply_to_message_id=str(message_data["reply_to_message_id"]))
 
-    def get_posts_blog(self, start_index:int =0, posts_limit:int = 50)->List[Post]:
+
+    def get_posts_blog(self, posts_limit:int, start_index:int = 0, **kwargs)->List[Post]:
         try:
             query = {"reply_to_message_id": {"$eq": None}}
             posts = self._messages_collection.find(query).skip(start_index).limit(posts_limit)
             posts_objects:List[Post] = [MongoDBRepository.__message_data_to_post_object(post_data) for post_data in posts]
             return posts_objects
         except Exception as e:
-            raise DatabaseError(str(e))
+            raise DatabaseError from e
 
 
     def get_message_blog(self, message_id:str, user_id_owner:str='') ->Message:
@@ -84,8 +88,10 @@ class MongoDBRepository(Repository):
                 if user_id_owner!='':
                   raise ResourceNotFoundError(f"Message ID {message_id} with user_id_owner {user_id_owner} not found")
                 raise ResourceNotFoundError(f"Message ID {message_id} not found")
+        except BlogAppException:
+            raise BlogAppException
         except Exception as e:
-            raise DatabaseError(str(e))
+            raise DatabaseError from e
 
 
 
@@ -100,10 +106,10 @@ class MongoDBRepository(Repository):
             insert_one_result:InsertOneResult = self._messages_collection.insert_one(new_message)
             created_message_data = self._messages_collection.find_one({"_id": insert_one_result.inserted_id})
             return MongoDBRepository.__message_data_to_message_object(created_message_data)
-        except ResourceNotFoundError:
-            raise ResourceNotFoundError
+        except BlogAppException:
+            raise BlogAppException
         except Exception as e:
-            raise DatabaseError(str(e))
+            raise DatabaseError from e
 
     def edit_message_blog(self, message_id: str, new_content:str)->Message:
         message_id_obj:ObjectId = ObjectId(message_id)
@@ -117,63 +123,139 @@ class MongoDBRepository(Repository):
                 raise DatabaseError(f"Edit message ID {message_id} fail")
             edited_message_data = self._messages_collection.find_one({"_id": message_id_obj})
             return MongoDBRepository.__message_data_to_message_object(edited_message_data)
-        except ResourceNotFoundError or DatabaseError as e:
-            raise e
+        except BlogAppException:
+            raise BlogAppException
         except Exception as e:
-            raise DatabaseError(str(e))
+            raise DatabaseError from e
 
 
-    def delete_message_blog(self, message_id:str)->Message:
-        message_to_delete:Message = self.get_message_blog(message_id)
+    def delete_message_blog(self, message_id:str)->Message|None:
+        filter_message:dict = {"_id": ObjectId(message_id)}
+        message_data:Mapping[str,any] = self._messages_collection.find_one(filter=filter_message)
+        if message_data:
+            try:
+                reply_comments_to_delete = self._messages_collection.find({"reply_to_message_id": ObjectId(message_id)})
+                if reply_comments_to_delete != None:
+                    for comment_data in reply_comments_to_delete:
+                        self.delete_message_blog(comment_data["_id"])
+
+                self._messages_collection.delete_one({"_id": ObjectId(message_id)})
+                return MongoDBRepository.__message_data_to_message_object(message_data)
+            except BlogAppException:
+                raise BlogAppException
+            except Exception as e:
+                raise DatabaseError from e
+
+
+    def __update_message_like(self, update_type:str, message_id:str, user_id:str)->bool:
+        message_id_obj = ObjectId(message_id)
         try:
-            reply_comments_to_delete = self._messages_collection.find({"reply_to_message_id": ObjectId(message_id)})
-            if reply_comments_to_delete is None:
+            update_result:UpdateResult = self._messages_collection.update_one(
+                upsert=False,
+                filter = {"_id": message_id_obj},
+                update={update_type: {"user_likes": user_id}}
+            )
+            if update_result.matched_count==0:
                 raise ResourceNotFoundError(f"Message ID {message_id} not found")
-
-            for comment_data in reply_comments_to_delete:
-                self.delete_message_blog(comment_data["_id"])
-
-            delete_result = self._messages_collection.delete_one({"_id": ObjectId(message_id)})
-            if delete_result.deleted_count == 0:
-                raise DatabaseError(f"Delete Message ID {message_id} fail")
-
-            return message_to_delete
-        except DatabaseError or ResourceNotFoundError as e:
-            raise e
+        except BlogAppException:
+                raise BlogAppException
         except Exception as e:
-            raise DatabaseError(str(e))
-
+            raise DatabaseError from e
+        return True
 
     def add_message_like(self, message_id: str, user_id: str) -> bool:
-        message_id_obj = ObjectId(message_id)
-        try:
-            update_result:UpdateResult = self._messages_collection.update_one(
-                upsert=False,
-                filter = {"_id": message_id_obj},
-                update={"$push": {"user_likes": user_id}}
-            )
-            if update_result.matched_count==0:
-                raise ResourceNotFoundError(f"Message ID {message_id} not found")
-        except Exception as e:
-            raise DatabaseError(str(e))
+        return self.__update_message_like("$push", message_id, user_id)
 
-        return True
 
     def remove_message_like(self, message_id: str, user_id: str) -> bool:
-        message_id_obj = ObjectId(message_id)
+        return self.__update_message_like("$pull", message_id, user_id)
+
+    @staticmethod
+    def __user_data_to_user_object(user_data:Mapping[str,any]):
+        return User(user_id=user_data["user_id"], email=user_data["email"],name=user_data["name"], roles=user_data["roles"])
+
+
+    def create_user_blog(self, user_id: str, email:str, name:str, roles:list[str]) -> User:
+        new_user = {
+            "user_id": user_id,
+            "email":email,
+            "name": name,
+            "roles": roles,
+        }
         try:
-            update_result:UpdateResult = self._messages_collection.update_one(
+            if self._users_collection.find_one(filter={"user_id": user_id}):
+                raise Exception(f"User Id {user_id} already exists")
+            insert_one_result: InsertOneResult = self._users_collection.insert_one(new_user)
+            created_user_data = self._messages_collection.find_one({"_id": insert_one_result.inserted_id})
+            return MongoDBRepository.__user_data_to_user_object(created_user_data)
+        except BlogAppException:
+            raise BlogAppException
+        except Exception as e:
+            raise DatabaseError from e
+
+
+    def get_user_blog(self, user_id: str) -> User:
+        filter:dict = {"user_id": user_id}
+        try:
+            user_data:Mapping[str,any] = self._users_collection.find_one(filter=filter)
+            if user_data is None:
+                raise ResourceNotFoundError(f"User ID {user_id} not found")
+        except BlogAppException:
+            raise BlogAppException
+        except Exception as e:
+            raise DatabaseError from e
+
+
+    def update_user_details_blog(self, user_id:str, email:str, name:str) -> User:
+        filter:dict = {"user_id": user_id}
+        update:dict = {"$set": {"email": email, "name":name}}
+        try:
+            update_result: UpdateResult = (self._messages_collection.
+                    update_one(filter=filter,update=update,upsert=False))
+            if update_result.matched_count==0:
+                raise ResourceNotFoundError(f"User ID {user_id} not found")
+            if update_result.modified_count == 0:
+                raise DatabaseError(f"Update User ID {user_id} fail")
+            updated_user_data = self._users_collection.find_one(filter=filter)
+            return MongoDBRepository.__user_data_to_user_object(updated_user_data)
+        except BlogAppException:
+            raise BlogAppException
+        except Exception as e:
+            raise DatabaseError from e
+
+
+    def delete_user_blog(self, user_id: str) -> User|None:
+        filter_user:dict = {"user_id": user_id}
+        user_data:Mapping[str,any] = self._users_collection.find_one(self,filter=filter_user)
+        if user_data:
+            try:
+                self._users_collection.delete_one(filter=filter)
+                return MongoDBRepository.__user_data_to_user_object(user_data)
+            except Exception as e:
+                raise DatabaseError from e
+
+
+    def __update_user_role(self,update_type:str, user_id:str, role:str)->bool:
+        try:
+            update_result:UpdateResult = self._users_collection.update_one(
                 upsert=False,
-                filter = {"_id": message_id_obj},
-                update={"$pull": {"user_likes": user_id}}
+                filter = {"user_id": user_id},
+                update={update_type: {"role": role}}
             )
             if update_result.matched_count==0:
-                raise ResourceNotFoundError(f"Message ID {message_id} not found")
+                raise ResourceNotFoundError(f"User ID {user_id} not found")
+        except BlogAppException:
+            raise BlogAppException
         except Exception as e:
-            raise DatabaseError(str(e))
+            raise DatabaseError from e
 
         return True
 
+    def add_user_role(self, user_id:str, role:str)->bool:
+        return self.__update_user_role("$push", user_id, role)
+
+    def remove_user_role(self, user_id:str, role:str):
+        return self.__update_user_role("$pull", user_id, role)
 
 
 if __name__=="__main__":
@@ -181,7 +263,7 @@ if __name__=="__main__":
     for post in mongo.get_posts_blog(0,20):
         mongo.delete_message_blog(post.message_id)
     print("posts deleted")
-    first_post:Message = mongo.create_message_blog("my very first post", '', "first_user")
+    first_post:Message = mongo.create_message_blog(content="my very first post", user_id_owner="first_user", reply_to_message_id='')
     print(first_post.content)
     b1 = mongo.add_message_like(first_post.message_id,"second_user")
     updated_post = mongo.get_message_blog(first_post.message_id)
@@ -191,7 +273,7 @@ if __name__=="__main__":
         print("like didn't work")
 
     print(len(mongo.get_posts_blog(0,20)))
-    mongo.create_message_blog("second message", '',"first user")
+    mongo.create_message_blog("second message","first user",'')
     print(len(mongo.get_posts_blog(0,20)))
     print(len(mongo.get_posts_blog(1, 20)))
     updated_post = mongo.get_message_blog(first_post.message_id)

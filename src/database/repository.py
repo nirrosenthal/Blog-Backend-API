@@ -23,7 +23,7 @@ class Repository(ABC):
         pass
 
     @abstractmethod
-    def delete_message_blog(self, message_id:str)->Message:
+    def delete_message_blog(self, message_id:str)->Message|None:
         pass
 
 
@@ -36,7 +36,7 @@ class Repository(ABC):
         pass
 
     @abstractmethod
-    def create_user_blog(self, user_id: str, name:str, roles:list[str])->User:
+    def create_user_blog(self, user_id: str, email:str, name:str, roles:list[str])->User:
         pass
 
     @abstractmethod
@@ -44,9 +44,18 @@ class Repository(ABC):
         pass
 
     @abstractmethod
-    def update_user_blog(self, user_id)->User:
+    def update_user_details_blog(self, user_id: str, email:str, name:str)->User:
         pass
 
     @abstractmethod
-    def delete_user_blog(self, user_id:str)->User:
+    def delete_user_blog(self, user_id:str)->User|None:
+        pass
+
+
+    @abstractmethod
+    def add_user_role(self, user_id:str, role: str)->bool:
+        pass
+
+    @abstractmethod
+    def remove_user_role(self, user_id:str, role:str)->bool:
         pass

@@ -20,5 +20,6 @@ class Comment(Message):
 @dataclass
 class User:
     user_id:str
+    email:str
     name:str
     roles:List[str]
