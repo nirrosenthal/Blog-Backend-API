@@ -28,7 +28,7 @@ def create_message_blog():
         created_message: Message = repository.SERVER_REPOSITORY.create_message_blog(content=content, user_id_owner=user_id_owner, reply_to_message_id=reply_to_message_id)
         return jsonify(asdict(created_message)), 200
     except ValidationError or TypeError as e:
-        raise InputValidationError(str(e))
+        raise InputValidationError from e
 
 
 
@@ -41,7 +41,7 @@ def get_posts_blog():
         posts:list[Post] = repository.SERVER_REPOSITORY.get_posts_blog(start_index=start_index, posts_limit=limit)
         return jsonify(posts), 200
     except ValidationError or TypeError as e:
-        raise InputValidationError(str(e))
+        raise InputValidationError from e
 
 
 @messages_bp.route('edit',methods=['POST'])
@@ -54,7 +54,7 @@ def edit_message_blog():
 
         return jsonify(asdict(edited_message)), 200
     except ValidationError as e:
-        raise InputValidationError(str(e))
+        raise InputValidationError from e
 
 
 
@@ -66,7 +66,7 @@ def delete_message_blog():
         deleted_message:Message = repository.SERVER_REPOSITORY.delete_message_blog(message_id)
         return jsonify(asdict(deleted_message)), 200
     except ValidationError as e:
-        raise InputValidationError(str(e))
+        raise InputValidationError from e
 
 
 @messages_bp.route('like/add', methods=['PUT'])
@@ -78,7 +78,7 @@ def add_message_like():
         repository.SERVER_REPOSITORY.add_message_like(message_id, user_id)
         return make_response(f'User {user_id} Like Added', 204)
     except ValidationError as e:
-        raise InputValidationError(str(e))
+        raise InputValidationError from e
 
 
 @messages_bp.route('like/remove', methods=['PUT'])
@@ -90,5 +90,5 @@ def remove_message_like():
         repository.SERVER_REPOSITORY.remove_message_like(message_id, user_id)
         return make_response(f'User {user_id} Like Removed', 204)
     except ValidationError as e:
-        raise InputValidationError(str(e))
+        raise InputValidationError from e
 
