@@ -13,8 +13,10 @@ class MessageId(BaseModel):
     def validate_message_id(cls, message_id):
         try:
             ObjectId(message_id)
+            return message_id
         except InvalidId as e:
             raise InputValidationError(str(e))
+
 
 class PostsGetRequest(BaseModel):
     start_index:int = Field(...,ge=0)
@@ -41,16 +43,16 @@ class MessageCreateRequest(BaseModel):
 
 
 class MessageEditRequest(BaseModel):
-    message_id:str = MessageId
+    message_id:MessageId
     content: str = Field(...,min_length=1, max_length=INPUT_LENGTH_LIMIT)
 
 
 class MessageDeleteRequest(BaseModel):
-    message_id:str =  MessageId
+    message_id:MessageId
 
 
 class MessageLikeRequest(BaseModel):
-    message_id: MessageId
+    message_id:MessageId
     user_id: str = Field(...,min_length=1, max_length=INPUT_LENGTH_LIMIT)
 
 

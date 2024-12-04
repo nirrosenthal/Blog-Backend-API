@@ -89,7 +89,7 @@ class MongoDBRepository(Repository):
 
 
 
-    def create_message_blog(self, content:str, reply_to_message_id:str, user_id_owner:str)->Message:
+    def create_message_blog(self, content:str, user_id_owner:str, reply_to_message_id:str)->Message:
         new_message = {
             "content": content,
             "user_id_owner": user_id_owner,
@@ -108,8 +108,9 @@ class MongoDBRepository(Repository):
     def edit_message_blog(self, message_id: str, new_content:str)->Message:
         message_id_obj:ObjectId = ObjectId(message_id)
         try:
-            update_result:UpdateResult = self._messages_collection.update_one({"_id": message_id_obj},
-                                           {"$set": {"content": new_content}})
+            update_result:UpdateResult = self._messages_collection.update_one(filter={"_id": message_id_obj},
+                                           update={"$set": {"content": new_content}},
+                                           upsert=False)
             if update_result.matched_count == 0:
                 raise ResourceNotFoundError(f"Message ID {message_id} not found")
             if update_result.modified_count == 0:
@@ -147,37 +148,31 @@ class MongoDBRepository(Repository):
         message_id_obj = ObjectId(message_id)
         try:
             update_result:UpdateResult = self._messages_collection.update_one(
-                {"_id": message_id_obj},
-                {"$push": {"user_likes": user_id}}
+                upsert=False,
+                filter = {"_id": message_id_obj},
+                update={"$push": {"user_likes": user_id}}
             )
-            if update_result.matched_count == 0:
+            if update_result.matched_count==0:
                 raise ResourceNotFoundError(f"Message ID {message_id} not found")
-            if update_result.modified_count == 0:
-                raise DatabaseError(f"Edit message ID {message_id} fail")
-
-            return True
-        except ResourceNotFoundError or DatabaseError as e:
-            raise e
         except Exception as e:
             raise DatabaseError(str(e))
+
+        return True
 
     def remove_message_like(self, message_id: str, user_id: str) -> bool:
         message_id_obj = ObjectId(message_id)
         try:
             update_result:UpdateResult = self._messages_collection.update_one(
-                {"_id": message_id_obj},
-                {"$pull": {"user_likes": user_id}}
+                upsert=False,
+                filter = {"_id": message_id_obj},
+                update={"$pull": {"user_likes": user_id}}
             )
-            if update_result.matched_count == 0:
+            if update_result.matched_count==0:
                 raise ResourceNotFoundError(f"Message ID {message_id} not found")
-            if update_result.modified_count == 0:
-                raise DatabaseError(f"Edit message ID {message_id} fail")
-
-            return True
-        except ResourceNotFoundError or DatabaseError as e:
-            raise e
         except Exception as e:
             raise DatabaseError(str(e))
+
+        return True
 
 
 

@@ -16,7 +16,7 @@ class Repository(ABC):
         pass
 
     @abstractmethod
-    def create_message_blog(self, content:str, user_id_owner: str, reply_to)->Message:
+    def create_message_blog(self, content:str, user_id_owner: str, reply_to_message_id:str)->Message:
         pass
 
     @abstractmethod
