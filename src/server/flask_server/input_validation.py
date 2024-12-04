@@ -15,7 +15,7 @@ class MessageId(BaseModel):
             ObjectId(message_id)
             return message_id
         except InvalidId as e:
-            raise InputValidationError(str(e))
+            raise InputValidationError from e
 
 
 class PostsGetRequest(BaseModel):
@@ -39,7 +39,7 @@ class MessageCreateRequest(BaseModel):
                 repository.SERVER_REPOSITORY.get_message_blog(reply_to_message_id)
             return reply_to_message_id
         except InvalidId as e:
-            raise InputValidationError(str(e))
+            raise InputValidationError from e
 
 
 class MessageEditRequest(BaseModel):
