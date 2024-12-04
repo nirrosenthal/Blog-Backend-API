@@ -16,3 +16,9 @@ class Post(Message):
 @dataclass
 class Comment(Message):
     reply_to_message_id:str
+
+@dataclass
+class User:
+    user_id:str
+    name:str
+    roles:List[str]
