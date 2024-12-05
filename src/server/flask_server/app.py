@@ -8,9 +8,6 @@ from src.server.routes.auth import auth_bp
 
 app:Flask = Flask(__name__)
 login_manager:LoginManager = LoginManager()
-# app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-# app.config['SECRET_KEY'] = "temp_sercret_key_example"
-# app.config['JWT_EXPIRATION_TIME'] = 3600
 
 @app.route('/')
 def home():
@@ -21,9 +18,9 @@ app.register_blueprint(auth_bp, url_prefix='/api/v0/auth')
 
 def init_app():
     repository.SERVER_REPOSITORY = MongoDBRepository()
-    os.environ["SECRET_KEY"] = "test_secret_key"
-    os.environ["JWT_EXPIRATION_TIME"] = "3600"
-    app.run(debug=True)
+    app.config["JWT_EXPIRATION_TIME"] = os.getenv("JWT_EXPIRATION_DATE",3600)
+    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
+    app.run(debug=True,port=os.getenv("FLASK_PORT",5000))
     return app
 
 if __name__ == '__main__':
