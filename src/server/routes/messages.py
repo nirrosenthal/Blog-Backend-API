@@ -5,6 +5,8 @@ import src.database.repository as repository
 import src.server.flask_server.input_validation as Input_Validation
 from pydantic import ValidationError
 from src.server.flask_server.exceptions import InputValidationError, BlogAppException
+from src.server.flask_server.jwt_authentication import valid_token_required,role_required,message_user_id_owner_required
+
 
 messages_bp = Blueprint('messages',__name__)
 
@@ -17,11 +19,18 @@ def handle_blog_app_exception(exception:BlogAppException):
     return jsonify(response),exception.error_code
 
 
+@role_required('post_user')
+def verify_post_user_if_no_reply_to_message_id():
+    pass
+
+@valid_token_required
 @messages_bp.route('create', methods=['POST'])
 def create_message_blog():
     content = request.get_json().get('content', '')
-    user_id_owner = request.get_json().get('user_id_owner','')
+    user_id_owner = request.get_json().get('user_id','')
     reply_to_message_id = request.get_json().get('reply_to_message_id','')
+    if reply_to_message_id=='':
+        verify_post_user_if_no_reply_to_message_id()
     try:
         Input_Validation.MessageCreateRequest(user_id_owner=user_id_owner, content=content, reply_to_message_id=reply_to_message_id)
 
@@ -31,7 +40,7 @@ def create_message_blog():
         raise InputValidationError from e
 
 
-
+@valid_token_required
 @messages_bp.route('posts',methods=['GET'])
 def get_posts_blog():
     start_index = int(request.get_json().get('start_index',0))
@@ -43,7 +52,8 @@ def get_posts_blog():
     except ValidationError or TypeError as e:
         raise InputValidationError from e
 
-
+@valid_token_required
+@message_user_id_owner_required
 @messages_bp.route('edit',methods=['POST'])
 def edit_message_blog():
     message_id = request.get_json().get('message_id','')
@@ -57,7 +67,8 @@ def edit_message_blog():
         raise InputValidationError from e
 
 
-
+@valid_token_required
+@message_user_id_owner_required
 @messages_bp.route('delete', methods=['DELETE'])
 def delete_message_blog():
     message_id = request.get_json().get('message_id','')
@@ -68,11 +79,11 @@ def delete_message_blog():
     except ValidationError as e:
         raise InputValidationError from e
 
-
+@valid_token_required
 @messages_bp.route('like/add', methods=['PUT'])
 def add_message_like():
     message_id = request.get_json().get('message_id','')
-    user_id = "need to get curr user id"
+    user_id = request.get_json().get('user_id','')
     try:
         Input_Validation.MessageLikeRequest(message_id={"message_id":message_id},user_id=user_id)
         repository.SERVER_REPOSITORY.add_message_like(message_id, user_id)
@@ -80,11 +91,11 @@ def add_message_like():
     except ValidationError as e:
         raise InputValidationError from e
 
-
+@valid_token_required
 @messages_bp.route('like/remove', methods=['PUT'])
 def remove_message_like():
     message_id = request.get_json().get('message_id','')
-    user_id = "NEED_TO_FIX"
+    user_id = request.get_json().get('user_id','')
     try:
         Input_Validation.MessageLikeRequest(message_id={"message_id":message_id},user_id=user_id)
         repository.SERVER_REPOSITORY.remove_message_like(message_id, user_id)
