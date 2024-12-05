@@ -3,9 +3,9 @@ from datetime import timedelta, timezone
 from src.server.flask_server.exceptions import AuthenticationError, UnauthorizedError, BlogAppException, ResourceNotFoundError
 import src.database.repository as repository
 import os
-from src.database.odm_blog import User
+from src.database.odm_blog import User, Message
 from datetime import datetime
-from flask import request, app, g
+from flask import request
 from functools import wraps
 import logging
 
@@ -48,8 +48,10 @@ def valid_token_required(api_request):
         try:
             payload = get_payload_from_request(request)
             user_odm:User = repository.SERVER_REPOSITORY.get_user_blog(user_id=payload['user_id'])
-            if set(user_odm.roles).issubset(set(payload['roles'])):
+            if payload['roles']!=[] and not set(payload['roles']).issubset(set(user_odm.roles)):
                 raise AuthenticationError("Invalid User Roles")
+        except BlogAppException as e:
+            raise e
         except Exception as e:
             raise AuthenticationError("Bad Token") from e
 
@@ -78,9 +80,8 @@ def message_user_id_owner_required(api_request):
         payload = get_payload_from_request(request)
         user_id: str = payload['user_id']
         message_id:str = request.get_json().get('message_id','')
-        try:
-            repository.SERVER_REPOSITORY.get_message_blog(message_id=message_id, user_id_owner=user_id)
-        except ResourceNotFoundError:
+        message:Message = repository.SERVER_REPOSITORY.get_message_blog(message_id=message_id)
+        if message.user_id_owner!=user_id:
             raise UnauthorizedError(f"User ID {user_id} is not owner of message_id {message_id}")
 
         logging.info(f"User {user_id} is verified as message owner of {message_id}")
