@@ -41,7 +41,7 @@ def handle_blog_app_exception(exception:BlogAppException):
 def login():
     user_id = request.json.get('user_id','')
     password = request.json.get('password','')
-
+    logging.info(f"User {user_id} Login started")
     try:
         Input_Validation.CredentialsValidation(user_id=user_id,password=password)
         if not verify_credentials(user_id, password):
@@ -52,4 +52,5 @@ def login():
         raise AuthenticationError("Invalid Credentials") from e
 
     token = generate_jwt(user.user_id, user.password, user.roles)
+    logging.info(f"User {user_id} Login success, returning JWT")
     return jsonify({'token': token}), 200
