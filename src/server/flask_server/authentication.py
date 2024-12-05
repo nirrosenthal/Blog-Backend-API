@@ -5,9 +5,13 @@ import src.database.repository as repository
 import os
 from src.database.odm_blog import User
 from datetime import datetime
-from flask import request
+from flask import request, app, g
 from functools import wraps
+import logging
 
+logging.basicConfig(level=logging.INFO)
+
+##TODO## # update all environ to app configurations
 
 def generate_jwt(user_id:str, password:str, roles: list[str])->str:
     payload = {
@@ -29,28 +33,29 @@ def decode_jwt(token: str):
         raise AuthenticationError("Invalid token")
 
 
+def get_payload_from_request(request):
+    token = None
+    if 'Authorization' in request.headers:
+        token = request.headers['Authorization'].split(" ")[1]
+    if not token:
+        raise AuthenticationError("Token is missing")
+    return decode_jwt(token)
+
+
 def valid_token_required(api_request):
     @wraps(api_request)
     def verify_token(*args, **kwargs):
-        token = None
 
-        if 'Authorization' in request.headers:
-            token = request.headers['Authorization'].split(" ")[1]
-
-        if not token:
-            raise AuthenticationError("Token is missing")
         try:
-            payload = decode_jwt(token)
-            request.user_id = payload['user_id']
-            request.roles = payload['roles']
-            user:User = repository.SERVER_REPOSITORY.get_user_blog(user_id=request.user_id)
-            if set(user.roles) != set(request.roles):
+            payload = get_payload_from_request(request)
+            user_odm:User = repository.SERVER_REPOSITORY.get_user_blog(user_id=payload['user_id'])
+            if set(user_odm.roles).issubset(set(payload['roles'])):
                 raise AuthenticationError("Invalid User Roles")
         except Exception as e:
             raise AuthenticationError("Bad Token") from e
 
         return api_request(*args, **kwargs)
-
+    logging.info("token is verified")
     return verify_token
 
 
@@ -58,7 +63,9 @@ def role_required(required_role:str):
     def decorator(api_request):
         @wraps(api_request)
         def check_required_role(*args, **kwargs):
-            if required_role not in request.get_json().get('roles', []):
+            payload = get_payload_from_request(request)
+            roles_payload: list[str] = payload['roles']
+            if required_role not in roles_payload:
                 raise UnauthorizedError
             return api_request(*args, **kwargs)
         return check_required_role
@@ -69,8 +76,9 @@ def message_user_id_owner_required(api_request):
     def decorator(api_request):
         @wraps(api_request)
         def verify_message_owner(*args, **kwargs):
+            payload = get_payload_from_request(request)
+            user_id: str = payload['user_id']
             message_id:str = request.get_json().get('message_id','')
-            user_id:str = request.get_json().get('user_id')
             try:
                 repository.SERVER_REPOSITORY.get_message_blog(message_id=message_id, user_id_owner=user_id)
             except ResourceNotFoundError:

@@ -1,6 +1,6 @@
 import traceback
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g, app
 import src.server.flask_server.input_validation as Input_Validation
 from src.server.flask_server.exceptions import AuthenticationError, BlogAppException
 import src.database.repository as repository
