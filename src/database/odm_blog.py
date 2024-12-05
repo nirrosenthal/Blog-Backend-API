@@ -22,4 +22,6 @@ class User:
     user_id:str
     email:str
     name:str
-    roles:List[str]
+    password:str
+    roles:list[str]
+
