@@ -9,11 +9,12 @@ from flask import request
 from functools import wraps
 
 
-def generate_jwt(user_id:str, roles: list[str])->str:
+def generate_jwt(user_id:str, password:str, roles: list[str])->str:
     payload = {
         'user_id': user_id,
+        'password': password,
         'roles': roles,
-        'exp': datetime.now(timezone.utc) + timedelta(seconds=os.environ.get('JWT_EXPIRATION_TIME',0))
+        'exp': datetime.now(timezone.utc) + timedelta(seconds=int(os.environ.get('JWT_EXPIRATION_TIME')))
     }
     token:str = jwt.encode(payload=payload, key=os.environ.get('SECRET_KEY'), algorithm='HS256')
     return token
@@ -21,16 +22,12 @@ def generate_jwt(user_id:str, roles: list[str])->str:
 
 def decode_jwt(token: str):
     try:
-        return jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return jwt.decode(token, os.environ.get('SECRET_KEY'), algorithms=["HS256"])
     except jwt.ExpiredSignatureError:
         raise AuthenticationError("Token has expired")
     except jwt.InvalidTokenError:
         raise AuthenticationError("Invalid token")
 
-
-
-##TODO##
-SECRET_KEY = 'your_secret_key'  # Make sure to keep this secret and secure
 
 def valid_token_required(api_request):
     @wraps(api_request)
