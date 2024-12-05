@@ -5,7 +5,7 @@ import src.database.repository as repository
 import src.server.flask_server.input_validation as Input_Validation
 from pydantic import ValidationError
 from src.server.flask_server.exceptions import InputValidationError, BlogAppException
-from src.server.flask_server.jwt_authentication import valid_token_required,role_required,message_user_id_owner_required
+from src.server.flask_server.authentication import valid_token_required,role_required,message_user_id_owner_required
 
 
 messages_bp = Blueprint('messages',__name__)
