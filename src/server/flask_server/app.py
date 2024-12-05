@@ -4,7 +4,7 @@ import os
 from src.server.routes.messages import messages_bp
 import src.database.repository as repository
 from src.database.mongo_db.mongo_repository import MongoDBRepository
-from .authentication import auth_bp
+from src.server.routes.auth import auth_bp
 
 app:Flask = Flask(__name__)
 login_manager:LoginManager = LoginManager()
@@ -17,7 +17,7 @@ def home():
     return "Hello, Flask!"
 
 app.register_blueprint(messages_bp, url_prefix='/api/v0/messages')
-app.register_blueprint(auth_bp, url_prefix="auth/")
+app.register_blueprint(auth_bp, url_prefix="/auth")
 
 def init_app():
     repository.SERVER_REPOSITORY = MongoDBRepository()
