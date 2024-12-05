@@ -5,10 +5,10 @@ import src.database.repository as repository
 import os
 from src.database.odm_blog import User, Message
 from datetime import datetime
-from flask import request
+from flask import request, app
 from functools import wraps
 import logging
-
+from app import app
 logging.basicConfig(level=logging.INFO)
 
 ##TODO## # update all environ to app configurations
@@ -18,15 +18,15 @@ def generate_jwt(user_id:str, password:str, roles: list[str])->str:
         'user_id': user_id,
         'password': password,
         'roles': roles,
-        'exp': datetime.now(timezone.utc) + timedelta(seconds=int(os.environ.get('JWT_EXPIRATION_TIME')))
+        'exp': datetime.now(timezone.utc) + timedelta(seconds=app.config['JWT_EXPIRATION_TIME'])
     }
-    token:str = jwt.encode(payload=payload, key=os.environ.get('SECRET_KEY'), algorithm='HS256')
+    token:str = jwt.encode(payload=payload, key=app.config['JWT_SECRET_KEY'], algorithm='HS256')
     return token
 
 
 def decode_jwt(token: str):
     try:
-        return jwt.decode(token, os.environ.get('SECRET_KEY'), algorithms=["HS256"])
+        return jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
     except jwt.ExpiredSignatureError:
         raise AuthenticationError("Token has expired")
     except jwt.InvalidTokenError:
