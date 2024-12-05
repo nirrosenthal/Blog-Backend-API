@@ -45,7 +45,6 @@ def get_payload_from_request(request):
 def valid_token_required(api_request):
     @wraps(api_request)
     def verify_token(*args, **kwargs):
-
         try:
             payload = get_payload_from_request(request)
             user_odm:User = repository.SERVER_REPOSITORY.get_user_blog(user_id=payload['user_id'])
@@ -54,8 +53,8 @@ def valid_token_required(api_request):
         except Exception as e:
             raise AuthenticationError("Bad Token") from e
 
+        logging.info(f"Token verification success for {user_odm.user_id}")
         return api_request(*args, **kwargs)
-    logging.info("token is verified")
     return verify_token
 
 
@@ -67,22 +66,23 @@ def role_required(required_role:str):
             roles_payload: list[str] = payload['roles']
             if required_role not in roles_payload:
                 raise UnauthorizedError
+            logging.info(f"User {payload['user_id']} has required role")
             return api_request(*args, **kwargs)
         return check_required_role
     return decorator
 
 
 def message_user_id_owner_required(api_request):
-    def decorator(api_request):
-        @wraps(api_request)
-        def verify_message_owner(*args, **kwargs):
-            payload = get_payload_from_request(request)
-            user_id: str = payload['user_id']
-            message_id:str = request.get_json().get('message_id','')
-            try:
-                repository.SERVER_REPOSITORY.get_message_blog(message_id=message_id, user_id_owner=user_id)
-            except ResourceNotFoundError:
-                raise UnauthorizedError(f"User ID {user_id} is not owner of message_id {message_id}")
-            return api_request(*args, **kwargs)
-        return verify_message_owner
-    return decorator
+    @wraps(api_request)
+    def verify_message_owner(*args, **kwargs):
+        payload = get_payload_from_request(request)
+        user_id: str = payload['user_id']
+        message_id:str = request.get_json().get('message_id','')
+        try:
+            repository.SERVER_REPOSITORY.get_message_blog(message_id=message_id, user_id_owner=user_id)
+        except ResourceNotFoundError:
+            raise UnauthorizedError(f"User ID {user_id} is not owner of message_id {message_id}")
+
+        logging.info(f"User {user_id} is verified as message owner of {message_id}")
+        return api_request(*args, **kwargs)
+    return verify_message_owner
