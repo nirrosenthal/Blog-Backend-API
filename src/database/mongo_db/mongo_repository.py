@@ -85,8 +85,8 @@ class MongoDBRepository(Repository):
                 if user_id_owner!='':
                   raise ResourceNotFoundError(f"Message ID {message_id} with user_id_owner {user_id_owner} not found")
                 raise ResourceNotFoundError(f"Message ID {message_id} not found")
-        except BlogAppException:
-            raise BlogAppException
+        except BlogAppException as e:
+            raise e
         except Exception as e:
             raise DatabaseError from e
 
@@ -103,8 +103,8 @@ class MongoDBRepository(Repository):
         try:
             insert_one_result:InsertOneResult = self._messages_collection.insert_one(new_message)
             created_message_data = self._messages_collection.find_one({"_id": insert_one_result.inserted_id})
-        except BlogAppException:
-            raise BlogAppException
+        except BlogAppException as e:
+            raise e
         except Exception as e:
             raise DatabaseError from e
 
@@ -121,8 +121,8 @@ class MongoDBRepository(Repository):
             if update_result.modified_count == 0:
                 raise DatabaseError(f"Edit message ID {message_id} fail")
             edited_message_data = self._messages_collection.find_one({"_id": message_id_obj})
-        except BlogAppException:
-            raise BlogAppException
+        except BlogAppException as e:
+            raise e
         except Exception as e:
             raise DatabaseError from e
 
@@ -139,8 +139,8 @@ class MongoDBRepository(Repository):
                     for comment_data in reply_comments_to_delete:
                         self.delete_message_blog(comment_data["_id"])
                 self._messages_collection.delete_one({"_id": ObjectId(message_id)})
-            except BlogAppException:
-                raise BlogAppException
+            except BlogAppException as e:
+                raise e
             except Exception as e:
                 raise DatabaseError from e
 
@@ -157,8 +157,8 @@ class MongoDBRepository(Repository):
             )
             if update_result.matched_count==0:
                 raise ResourceNotFoundError(f"Message ID {message_id} not found")
-        except BlogAppException:
-                raise BlogAppException
+        except BlogAppException as e:
+            raise e
         except Exception as e:
             raise DatabaseError from e
 
@@ -222,8 +222,8 @@ class MongoDBRepository(Repository):
             if update_result.modified_count == 0:
                 raise DatabaseError(f"Update User ID {user_id} fail")
             updated_user_data = self._users_collection.find_one(filter=filter)
-        except BlogAppException:
-            raise BlogAppException
+        except BlogAppException as e:
+            raise e
         except Exception as e:
             raise DatabaseError from e
 
