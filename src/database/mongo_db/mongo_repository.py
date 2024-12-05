@@ -7,17 +7,9 @@ from src.database.repository import Repository
 from typing import List, Mapping, Optional
 from pymongo import MongoClient
 from bson import ObjectId
+import os
 
-READ_WRITE_USER = "root"
-READ_WRITE_PASSWORD = "password"
-MONGO_PORT = "27017"
-MONGO_HOST = "localhost"
-# MONGO_USER = os.getenv("MONGO_INITDB_ROOT_USERNAME", "root_example")
-# MONGO_PASSWORD = os.getenv("MONGO_INITDB_ROOT_PASSWORD", "password_example")
-# MONGO_HOST = os.getenv("MONGO_HOST", "localhost")
-# MONGO_PORT = os.getenv("MONGO_PORT", "27017")
-
-CONNECTION_STRING = f"mongodb://{READ_WRITE_USER}:{READ_WRITE_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/"
+CONNECTION_STRING = f"mongodb://{os.getenv('READ_WRITE_USER')}:{os.getenv('READ_WRITE_PASSWORD')}@{os.getenv('MONGO_HOST')}:{os.getenv('MONGO_PORT')}/"
 
 class MongoDBRepository(Repository):
     _instance: Optional['MongoDBRepository'] = None
@@ -266,10 +258,12 @@ class MongoDBRepository(Repository):
 
 if __name__=="__main__":
     mongo = MongoDBRepository()
+
+    print(mongo.get_message_blog("67503c91afe4259d3efd1732"))
     # mongo.delete_user_blog("user1")
     # mongo.create_user_blog(user_id="user1",name="user1",password="$2b$12$ec8wsNHjZq6gZu7Lqa.SmekrPBLxe/Dl0uQICpPRM/L3dEeAkg8O.",email="user1@gmail.com",roles=["post_user"])
     # mongo.create_user_blog(user_id="user2",name="user2", password="user2", email="user2@gmail.com", roles=[])
-    print(mongo.get_user_blog("user2"))
+    # print(mongo.get_user_blog("user2"))
     # mongo.update_user_details_blog(user_id ="user2",password='$2b$12$G9vjh1e8DS.nU0e.Xo6DWu1Y64we2kKXL75laTuGfQJIPUKFAQMYq')
     # mongo.remove_user_role("user1","post_user")
     # print(mongo.get_user_blog("user1"))
