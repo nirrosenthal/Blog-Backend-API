@@ -9,7 +9,6 @@ from pymongo import MongoClient
 from bson import ObjectId
 import os
 
-CONNECTION_STRING = f"mongodb://{os.getenv('READ_WRITE_USER')}:{os.getenv('READ_WRITE_PASSWORD')}@{os.getenv('MONGO_HOST')}:{os.getenv('MONGO_PORT')}/"
 
 class MongoDBRepository(Repository):
     _instance: Optional['MongoDBRepository'] = None
@@ -23,7 +22,8 @@ class MongoDBRepository(Repository):
 
     @classmethod
     def __init_mongo_client(cls):
-        cls._client:MongoClient = MongoClient(CONNECTION_STRING)
+        connection_string:str = f"mongodb://{os.getenv('READ_WRITE_USER')}:{os.getenv('READ_WRITE_PASSWORD')}@{os.getenv('MONGO_HOST')}:{os.getenv('MONGO_PORT')}/"
+        cls._client:MongoClient = MongoClient(connection_string)
         cls._messages_db:Database = cls._client["messages"]
         cls._users_db:Database = cls._client["users"]
         cls._messages_collection:Collection = cls._messages_db["comments"]
