@@ -212,10 +212,10 @@ class MongoDBRepository(Repository):
 
     def update_user_details_blog(self, user_id: str = '',password:str = '', email:str = '', name:str= '')->User:
         filter:dict = {"user_id": user_id}
-        set_dict:dict = {variable:value for variable,value in locals() if variable!='self' and value!=''}
+        set_dict:dict = {variable:value for variable,value in locals().items() if variable!='self' and value!=''}
         update: dict = {"$set": set_dict}
         try:
-            update_result: UpdateResult = (self._messages_collection.
+            update_result: UpdateResult = (self._users_collection.
                     update_one(filter=filter,update=update,upsert=False))
             if update_result.matched_count==0:
                 raise ResourceNotFoundError(f"User ID {user_id} not found")
@@ -266,11 +266,13 @@ class MongoDBRepository(Repository):
 
 if __name__=="__main__":
     mongo = MongoDBRepository()
-    # mongo.create_user_blog(user_id="user1",name="user1",password="user1",email="user1@gmail.com",roles=["post_user"])
+    # mongo.delete_user_blog("user1")
+    # mongo.create_user_blog(user_id="user1",name="user1",password="$2b$12$ec8wsNHjZq6gZu7Lqa.SmekrPBLxe/Dl0uQICpPRM/L3dEeAkg8O.",email="user1@gmail.com",roles=["post_user"])
     # mongo.create_user_blog(user_id="user2",name="user2", password="user2", email="user2@gmail.com", roles=[])
-    print(mongo.get_user_blog("user1"))
-    mongo.remove_user_role("user1","post_user")
-    print(mongo.get_user_blog("user1"))
+    print(mongo.get_user_blog("user2"))
+    # mongo.update_user_details_blog(user_id ="user2",password='$2b$12$G9vjh1e8DS.nU0e.Xo6DWu1Y64we2kKXL75laTuGfQJIPUKFAQMYq')
+    # mongo.remove_user_role("user1","post_user")
+    # print(mongo.get_user_blog("user1"))
     # for post in mongo.get_posts_blog(0,20):
     #     mongo.delete_message_blog(post.message_id)
     # print("posts deleted")
