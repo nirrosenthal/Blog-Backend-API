@@ -1,3 +1,7 @@
+dataclasses
 flask
 pymongo
 pydantic
+flask_login
+pyjwt
+bcrypt
