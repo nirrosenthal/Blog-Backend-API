@@ -55,6 +55,11 @@ class MessageLikeRequest(BaseModel):
     message_id:MessageId
     user_id: str = Field(...,min_length=1, max_length=INPUT_LENGTH_LIMIT)
 
+class CredentialsValidation(BaseModel):
+    user_id: str = Field(...,min_length=1, max_length=INPUT_LENGTH_LIMIT)
+    password: str = Field(...,min_length=1, max_length=INPUT_LENGTH_LIMIT)
+
+
 
 if __name__ == '__main__':
     print("done")
