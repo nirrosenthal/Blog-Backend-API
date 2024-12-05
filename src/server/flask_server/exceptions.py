@@ -27,6 +27,15 @@ class DatabaseError(BlogAppException):
         self.error_code = 500
         super().__init__(self.message, self.error_code)
 
+
+class AuthenticationError(BlogAppException):
+    """Raise when there is an error with the authentication process"""
+    def __init__(self, message="Authentication Failed"):
+        self.message = message
+        self.error_code = 401
+        super().__init__(self.message, self.error_code)
+
+
 class UnauthorizedError(BlogAppException):
     """Raised when a user is not authorized to access a resource"""
     def __init__(self, message="Unauthorized access"):
