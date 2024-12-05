@@ -35,9 +35,10 @@ def create_message_blog():
         Input_Validation.MessageCreateRequest(user_id_owner=user_id_owner, content=content, reply_to_message_id=reply_to_message_id)
 
         created_message: Message = repository.SERVER_REPOSITORY.create_message_blog(content=content, user_id_owner=user_id_owner, reply_to_message_id=reply_to_message_id)
-        return jsonify(asdict(created_message)), 200
     except ValidationError or TypeError as e:
         raise InputValidationError from e
+
+    return jsonify(asdict(created_message)), 200
 
 
 @valid_token_required
@@ -48,9 +49,10 @@ def get_posts_blog():
     try:
         Input_Validation.PostsGetRequest(start_index=start_index, posts_limit=limit)
         posts:list[Post] = repository.SERVER_REPOSITORY.get_posts_blog(start_index=start_index, posts_limit=limit)
-        return jsonify(posts), 200
     except ValidationError or TypeError as e:
         raise InputValidationError from e
+
+    return jsonify(posts), 200
 
 @valid_token_required
 @message_user_id_owner_required
@@ -61,10 +63,10 @@ def edit_message_blog():
     try:
         Input_Validation.MessageEditRequest(message_id={"message_id":message_id}, content=content)
         edited_message:Message = repository.SERVER_REPOSITORY.edit_message_blog(message_id, content)
-
-        return jsonify(asdict(edited_message)), 200
     except ValidationError as e:
         raise InputValidationError from e
+
+    return jsonify(asdict(edited_message)), 200
 
 
 @valid_token_required
@@ -74,10 +76,13 @@ def delete_message_blog():
     message_id = request.get_json().get('message_id','')
     try:
         Input_Validation.MessageDeleteRequest(message_id={"message_id":message_id})
-        deleted_message:Message = repository.SERVER_REPOSITORY.delete_message_blog(message_id)
-        return jsonify(asdict(deleted_message)), 200
+        deleted_message:Message|None = repository.SERVER_REPOSITORY.delete_message_blog(message_id)
     except ValidationError as e:
         raise InputValidationError from e
+
+    if deleted_message:
+        return jsonify({"message": "Message doesn't exist in database"}),200
+    return jsonify(asdict(deleted_message)), 200
 
 @valid_token_required
 @messages_bp.route('like/add', methods=['PUT'])
@@ -87,9 +92,10 @@ def add_message_like():
     try:
         Input_Validation.MessageLikeRequest(message_id={"message_id":message_id},user_id=user_id)
         repository.SERVER_REPOSITORY.add_message_like(message_id, user_id)
-        return make_response(f'User {user_id} Like Added', 204)
     except ValidationError as e:
         raise InputValidationError from e
+
+    return make_response(f'User {user_id} Like Added', 204)
 
 @valid_token_required
 @messages_bp.route('like/remove', methods=['PUT'])
@@ -99,7 +105,7 @@ def remove_message_like():
     try:
         Input_Validation.MessageLikeRequest(message_id={"message_id":message_id},user_id=user_id)
         repository.SERVER_REPOSITORY.remove_message_like(message_id, user_id)
-        return make_response(f'User {user_id} Like Removed', 204)
     except ValidationError as e:
         raise InputValidationError from e
 
+    return make_response(f'User {user_id} Like Removed', 204)
