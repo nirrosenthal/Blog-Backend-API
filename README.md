@@ -30,7 +30,7 @@ Backend Design of a Message Blog, allowing to post, edit and delete messages
 
 2. Build MongoDB and Flask Images:
 ```bash
-docker-compose build -d 
+docker-compose build
 ```
 3. Run Docker Compose container:
 ```bash
