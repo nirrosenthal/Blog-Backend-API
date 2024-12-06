@@ -100,3 +100,13 @@ def register():
     repository.SERVER_REPOSITORY.create_user_blog(user_id=user_id, name=name, email=email,password=hashed_password,roles=roles)
 
     return make_response(f'User {user_id} created', 204)
+
+
+@auth_bp.route('account/delete', methods=['DELETE'])
+def delete_user_account():
+    user_id:str = request.json.get('user_id','')
+    user:User = repository.SERVER_REPOSITORY.delete_user_blog(user_id)
+    if user is None:
+        return jsonify({"message": f"User {user_id} doesn't exist"}), 200
+
+    return make_response(f'User {user_id} removed', 204)
