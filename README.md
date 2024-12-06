@@ -4,8 +4,8 @@ Backend Design of a Message Blog, allowing to post, edit and delete messages
 ## Table Of Contents
 - [Key Features](#key-features)
 - [Installation](#installation)
-- [Running Docker](#running)
-- [Using REST API](#api)
+- [Running Docker](#running-docker)
+- [Using REST API](#using-rest-api)
 
 ## Key Features
 - Written in Python
@@ -32,7 +32,7 @@ Backend Design of a Message Blog, allowing to post, edit and delete messages
 ```bash
 docker-compose build
 ```
-3. Run Docker Compose container (see [Using REST API](#api))
+3. Run Docker Compose container (see [Using REST API](#using-rest-api))
 ```bash
 docker-compose up -d
 ```
