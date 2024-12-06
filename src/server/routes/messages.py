@@ -1,14 +1,14 @@
 from flask import Blueprint, request, jsonify, make_response, g ,app
-from src.database.odm_blog import Post, Message
+from src.db.odm_blog import Post, Message
 from dataclasses import asdict
-import src.database.repository as repository
-import src.server.flask_server.input_validation as Input_Validation
+import src.db.repository as repository
+import src.server.flask.input_validation as Input_Validation
 from pydantic import ValidationError
-from src.server.flask_server.exceptions import InputValidationError, BlogAppException
-from src.server.flask_server.authentication import valid_token_required,role_required,message_user_id_owner_required
+from src.server.flask.exceptions import InputValidationError, BlogAppException
+from src.server.flask.token import valid_token_required,role_required,message_user_id_owner_required
 import logging
-from src.server.flask_server.authentication import get_payload_from_request
-
+from src.server.flask.token import get_payload_from_request
+from typing import Union
 logging.basicConfig(level=logging.INFO)
 
 
@@ -85,12 +85,12 @@ def delete_message_blog():
     message_id = request.get_json().get('message_id','')
     try:
         Input_Validation.MessageDeleteRequest(message_id={"message_id":message_id})
-        deleted_message:Message|None = repository.SERVER_REPOSITORY.delete_message_blog(message_id)
+        deleted_message:Union[Message|None] = repository.SERVER_REPOSITORY.delete_message_blog(message_id)
     except ValidationError as e:
         raise InputValidationError from e
 
     if deleted_message is None:
-        return jsonify({"message": "Message doesn't exist in database"}),200
+        return jsonify({"message": "Message doesn't exist in db"}),200
     return jsonify(asdict(deleted_message)), 200
 
 @messages_bp.route('like/add', methods=['PUT'])
