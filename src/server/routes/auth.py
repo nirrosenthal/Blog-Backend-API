@@ -1,11 +1,11 @@
 import traceback
 
 from flask import Blueprint, request, jsonify, g, app
-import src.server.flask_server.input_validation as Input_Validation
-from src.server.flask_server.exceptions import AuthenticationError, BlogAppException
+import src.server.flask.input_validation as Input_Validation
+from src.server.flask.exceptions import AuthenticationError, BlogAppException
 import src.database.repository as repository
 from src.database.odm_blog import User
-from src.server.flask_server.authentication import generate_jwt
+from src.server.flask.authentication import generate_jwt
 import bcrypt
 import logging
 
