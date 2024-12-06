@@ -4,7 +4,6 @@ Backend Design of a Message Blog, allowing to post, edit and delete messages
 ## Table Of Contents
 - [Key Features](#key-features)
 - [Installation](#installation)
-- [Design Overview](#design)
 - [Running](#running)
 
 ## Key Features
@@ -36,6 +35,8 @@ docker-compose build
 ```bash
 docker-compose up -d
 ```
+4. See test/server/flask/routes for examples and API usage
+
 4. Stop Container Run:
 ```bash
 docker-compose down
