@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
-from src.database.odm_blog import Message, Post, User
+from typing import List, Optional, Union
+from src.db.odm_blog import Message, Post, User
 
 SERVER_REPOSITORY:Optional['Repository'] = None
 
@@ -9,33 +9,33 @@ class Repository(ABC):
     @abstractmethod
     def get_posts_blog(self, posts_limit:int, start_index:int = 0)->List[Post]:
         """
-        Get Lists of up to posts_limit posts from the database starting from start_index position
+        Get Lists of up to posts_limit posts from the db starting from start_index position
         :param posts_limit: post limit for pagination
         :param start_index: starting post index
-        :return: list of Post objects retrieved from database
+        :return: list of Post objects retrieved from db
         :raises DatabaseError if db operation fail
         """
         pass
 
-## return error if resource dones't exist
+
     @abstractmethod
     def get_message_blog(self, message_id:str, user_id_owner:str='')->Message:
         """
-        Get message from database.
-        :param message_id: unique identifier for message in database
+        Get message from db.
+        :param message_id: unique identifier for message in db
         :param user_id_owner: optional unique identifier for user
         :return:
         :raises:
-            ResourceNotFoundError if message doesn't exist in database
+            ResourceNotFoundError if message doesn't exist in db
             DatabaseError for DB operation fail
         """
         pass
 
-### error in case of message DB
+
     @abstractmethod
     def create_message_blog(self, content:str, user_id_owner: str, reply_to_message_id:str)->Message:
         """
-        Create message and return Message with database message_id
+        Create message and return Message with db message_id
         :param content: message text field
         :param user_id_owner: unique user_id of message creator
         :param reply_to_message_id: message_id of message being replied
@@ -44,7 +44,7 @@ class Repository(ABC):
         """
         pass
 
-    ### error if resource isn't found
+
     @abstractmethod
     def edit_message_blog(self, message_id: str, edited_content:str)->Message:
         """
@@ -58,11 +58,11 @@ class Repository(ABC):
         """
         pass
 
-    ### no errors if message is already deleted, if so will return None
+
     @abstractmethod
-    def delete_message_blog(self, message_id:str)->Message|None:
+    def delete_message_blog(self, message_id:str)->Union[Message,None]:
         """
-        Delete message from database.
+        Delete message from db, and any other comments that replied to that message
         No error if message doesn't exist
         :param message_id: unique identifier for message
         :return: Message object of deleted message, or None if already doesn't exist
@@ -100,7 +100,7 @@ class Repository(ABC):
         """
         pass
 
-### return error if server failes
+
     @abstractmethod
     def create_user_blog(self, user_id: str, password:str, email:str, name:str, roles:List[str])->User:
         """
@@ -116,13 +116,13 @@ class Repository(ABC):
         """
         pass
 
-### return eeror if resource not found
+
     @abstractmethod
     def get_user_blog(self, user_id:str)->User:
         """
         Get User object from Database
         :param user_id: unique identifier for user
-        :return: User Object with properties from database
+        :return: User Object with properties from db
         :raises:
             DatabaseError for DB operation fail
             ResourceNotFound for user_id that isn't found
@@ -130,7 +130,6 @@ class Repository(ABC):
         pass
 
 
-## values can be empty if you don't want to update
     @abstractmethod
     def update_user_details_blog(self, user_id: str,password:str = '', email:str = '', name:str= '')->User:
         """
@@ -148,9 +147,8 @@ class Repository(ABC):
         pass
 
 
-## no error if doenst' exist, return none if already deelted, only admin
     @abstractmethod
-    def delete_user_blog(self, user_id:str)->User|None:
+    def delete_user_blog(self, user_id:str)->Union[User,None]:
         """
         Delete user from Database
         :param user_id: unique identifier for user
@@ -160,7 +158,6 @@ class Repository(ABC):
         pass
 
 
-## error if user doesn't exist, everything else fine only by admin
     @abstractmethod
     def add_user_role(self, user_id:str, role: str)->bool:
         """
@@ -171,7 +168,7 @@ class Repository(ABC):
         :raise: DatabaseError for DB operation fail
         """
         pass
-## error if user doesn't exist, everything else fine only by admin
+
     @abstractmethod
     def remove_user_role(self, user_id:str, role:str)->bool:
         """

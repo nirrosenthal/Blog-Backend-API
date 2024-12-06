@@ -1,8 +1,8 @@
 from bson import ObjectId
 from bson.errors import InvalidId
 from pydantic import BaseModel, Field, ValidationError, validator
-import src.database.repository as repository
-from src.server.flask_server.exceptions import InputValidationError
+import src.db.repository as repository
+from src.server.flask.exceptions import InputValidationError
 
 INPUT_LENGTH_LIMIT:int = 1000
 POSTS_GET_LIMIT:int = 1000
@@ -58,8 +58,3 @@ class MessageLikeRequest(BaseModel):
 class CredentialsValidation(BaseModel):
     user_id: str = Field(...,min_length=1, max_length=INPUT_LENGTH_LIMIT)
     password: str = Field(...,min_length=1, max_length=INPUT_LENGTH_LIMIT)
-
-
-
-if __name__ == '__main__':
-    print("done")

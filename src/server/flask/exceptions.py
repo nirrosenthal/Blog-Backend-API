@@ -21,7 +21,7 @@ class InputValidationError(BlogAppException):
         super().__init__(self.message, self.error_code)
 
 class DatabaseError(BlogAppException):
-    """Raised when there is a database-related error"""
+    """Raised when there is a db-related error"""
     def __init__(self, message="Database error occurred"):
         self.message = message
         self.error_code = 500

@@ -1,13 +1,16 @@
 from pymongo.results import UpdateResult, InsertOneResult
 from pymongo.synchronous.collection import Collection
 from pymongo.synchronous.database import Database
-from src.server.flask_server.exceptions import ResourceNotFoundError, DatabaseError, BlogAppException
-from src.database.odm_blog import Post, Comment, Message, User
-from src.database.repository import Repository
-from typing import List, Mapping, Optional
+from src.server.flask.exceptions import ResourceNotFoundError, DatabaseError, BlogAppException
+from src.db.odm_blog import Post, Comment, Message, User
+from src.db.repository import Repository
+from typing import List, Mapping, Optional, Union
 from pymongo import MongoClient
 from bson import ObjectId
 import os
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 
 class MongoDBRepository(Repository):
@@ -22,8 +25,13 @@ class MongoDBRepository(Repository):
 
     @classmethod
     def __init_mongo_client(cls):
-        connection_string:str = f"mongodb://{os.getenv('SERVER_API_USER')}:{os.getenv('SERVER_API_PASSWORD')}@{os.getenv('MONGO_HOST')}:{os.getenv('MONGO_PORT')}/"
-        cls._client:MongoClient = MongoClient(connection_string)
+        MONGO_USER:str = str(os.getenv("SERVER_API_USER"))
+        MONGO_PASSWORD:str = str(os.getenv("SERVER_API_PASSWORD"))
+        MONGO_HOST:str = str(os.getenv("MONGO_HOST"))
+        MONGO_PORT:str = str(os.getenv("MONGO_PORT"))
+
+        CONNECTION_STRING = f"mongodb://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/"
+        cls._client:MongoClient = MongoClient(CONNECTION_STRING)
         cls._messages_db:Database = cls._client["messages"]
         cls._users_db:Database = cls._client["users"]
         cls._messages_collection:Collection = cls._messages_db["comments"]
@@ -121,7 +129,7 @@ class MongoDBRepository(Repository):
         return MongoDBRepository.__message_data_to_message_object(edited_message_data)
 
 
-    def delete_message_blog(self, message_id:str)->Message|None:
+    def delete_message_blog(self, message_id:str)->Union[Message,None]:
         filter_message:dict = {"_id": ObjectId(message_id)}
         message_data:Mapping[str,any] = self._messages_collection.find_one(filter=filter_message)
         if message_data:
@@ -168,7 +176,7 @@ class MongoDBRepository(Repository):
         return User(user_id=user_data["user_id"],password=user_data["password"], email=user_data["email"],name=user_data["name"], roles=user_data["roles"])
 
 
-    def create_user_blog(self, user_id: str,password:str, email:str, name:str, roles:list[str]) -> User:
+    def create_user_blog(self, user_id: str,password:str, email:str, name:str, roles:List[str]) -> User:
         new_user = {
             "user_id": user_id,
             "password": password,
@@ -202,17 +210,23 @@ class MongoDBRepository(Repository):
         return MongoDBRepository.__user_data_to_user_object(user_data)
 
 
-    def update_user_details_blog(self, user_id: str = '',password:str = '', email:str = '', name:str= '')->User:
+    def update_user_details_blog(self, user_id: str,password:str = '', email:str = '', name:str= '')->User:
         filter:dict = {"user_id": user_id}
-        set_dict:dict = {variable:value for variable,value in locals().items() if variable!='self' and value!=''}
+        set_dict: dict = {}
+        if password!='':
+            set_dict['password'] = password
+        if email != '':
+            set_dict['email'] = email
+        if name!='':
+            set_dict['name'] = name
         update: dict = {"$set": set_dict}
+        print(set_dict)
         try:
             update_result: UpdateResult = (self._users_collection.
                     update_one(filter=filter,update=update,upsert=False))
             if update_result.matched_count==0:
                 raise ResourceNotFoundError(f"User ID {user_id} not found")
-            if update_result.modified_count == 0:
-                raise DatabaseError(f"Update User ID {user_id} fail")
+
             updated_user_data = self._users_collection.find_one(filter=filter)
         except BlogAppException as e:
             raise e
@@ -222,7 +236,7 @@ class MongoDBRepository(Repository):
         return MongoDBRepository.__user_data_to_user_object(updated_user_data)
 
 
-    def delete_user_blog(self, user_id: str) -> User|None:
+    def delete_user_blog(self, user_id: str) -> Union[User,None]:
         filter_user:dict = {"user_id": user_id}
         user_data:Mapping[str,any] = self._users_collection.find_one(filter=filter_user)
         if user_data:
@@ -259,12 +273,12 @@ class MongoDBRepository(Repository):
 if __name__=="__main__":
     mongo = MongoDBRepository()
 
-    print(mongo.get_message_blog("67503c91afe4259d3efd1732"))
+    # print(mongo.get_message_blog("67503c91afe4259d3efd1732"))
     # mongo.delete_user_blog("user1")
     # mongo.create_user_blog(user_id="user1",name="user1",password="$2b$12$ec8wsNHjZq6gZu7Lqa.SmekrPBLxe/Dl0uQICpPRM/L3dEeAkg8O.",email="user1@gmail.com",roles=["post_user"])
+    print(mongo.get_user_blog("user2"))
     # mongo.create_user_blog(user_id="user2",name="user2", password="user2", email="user2@gmail.com", roles=[])
-    # print(mongo.get_user_blog("user2"))
-    # mongo.update_user_details_blog(user_id ="user2",password='$2b$12$G9vjh1e8DS.nU0e.Xo6DWu1Y64we2kKXL75laTuGfQJIPUKFAQMYq')
+    mongo.update_user_details_blog(user_id ="user2",password='$2b$12$TqqCf5JQh5W9oXjbqK4oguu/4D9ndD0fTr2ni3qpNvV1Z79nAVgzy')
     # mongo.remove_user_role("user1","post_user")
     # print(mongo.get_user_blog("user1"))
     # for post in mongo.get_posts_blog(0,20):
