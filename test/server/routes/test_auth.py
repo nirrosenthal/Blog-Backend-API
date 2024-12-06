@@ -32,13 +32,25 @@ def login(user_id:str, password:str)->requests.Response:
     return response
 
 
+def delete_user(user_id:str)->requests.Response:
+    url = "http://127.0.0.1:5000/api/v0/auth/account/delete"
+    user_details = {"user_id": user_id}
+    response:requests.Response = requests.delete(url, json=user_details)
+    print_response_status(response)
+    return response
+
+
+
 if __name__=="__main__":
-    user3 = "user3"
-    password3 = "password3"
-    roles3 = ["user_post"]
-    response = create_user(user3,password3,roles3)
-    user1_jwt_token = login(user3,password3).json().get("token")
+    # can create posts
+    user1,password1,roles1 = "user3","password3",["post_user"]
+    response = create_user(user1,password1,roles1)
+    user1_jwt_token = login(user1,password1).json().get("token")
     print(user1_jwt_token)
+    # cannot create posts only comments
+    # user2,password2,role2 = "user2","password2",[]
+    # create_user(user2,password2,role2)
+
 
 
 
