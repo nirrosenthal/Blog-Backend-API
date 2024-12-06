@@ -3,9 +3,9 @@ import traceback
 from flask import Blueprint, request, jsonify, g, app
 import src.server.flask.input_validation as Input_Validation
 from src.server.flask.exceptions import AuthenticationError, BlogAppException
-import src.database.repository as repository
-from src.database.odm_blog import User
-from src.server.flask.authentication import generate_jwt
+import src.db.repository as repository
+from src.db.odm_blog import User
+from src.server.flask.token import generate_jwt
 import bcrypt
 import logging
 
@@ -18,6 +18,7 @@ def hash_password(password: str) -> str:
     salt = bcrypt.gensalt()
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
     return hashed_password.decode('utf-8')
+
 
 def check_password(stored_hash: str, password: str) -> bool:
     return bcrypt.checkpw(password.encode('utf-8'), stored_hash.encode('utf-8'))
