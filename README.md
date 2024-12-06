@@ -17,9 +17,6 @@ Backend Design of a Message Blog, allowing to post, edit and delete messages
 - Error Handling 
 - Docker Compose
 
-## Design Overview
-* DB Considiration
-
 ## Requirments
 1. Docker
 2. Docker Compose
