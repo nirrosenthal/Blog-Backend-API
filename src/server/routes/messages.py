@@ -3,6 +3,7 @@ from src.db.odm_blog import Post, Message
 from dataclasses import asdict
 import src.db.repository as repository
 from pydantic import ValidationError
+import src.server.routes.input_validation as input_validation
 from src.server.flask.exceptions import InputValidationError, BlogAppException
 from src.server.routes.token import valid_token_required,role_required,message_user_id_owner_required
 import logging
@@ -151,6 +152,24 @@ def remove_message_like():
         input_validation.MessageLikeRequest(message_id={"message_id":message_id}, user_id=user_id)
         repository.SERVER_REPOSITORY.remove_message_like(message_id, user_id)
     except ValidationError as e:
-        raise InputValidationError from e
+        raise InputValidationError(str(e)) from e
 
     return make_response(f'User {user_id} Like Removed', 204)
+
+
+@messages_bp.route('get', methods=['GET'])
+@valid_token_required
+def get_message_like():
+    """
+    Search for message_id and return Message object if found
+    :return: Message object
+    """
+    message_id = request.get_json().get('message_id','')
+    try:
+        input_validation.MessageId(message_id=message_id)
+        message:Message = repository.SERVER_REPOSITORY.get_message_blog(message_id)
+    except ValidationError as e:
+        raise InputValidationError(str(e)) from e
+
+    return jsonify(asdict(message)), 200
+
