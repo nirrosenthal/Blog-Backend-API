@@ -153,6 +153,7 @@ class MongoDBRepository(Repository):
         message_data:Mapping[str,any] = self._messages_collection.find_one(filter=filter_message)
         if message_data:
             try:
+                # delete messages that replied to original message being deleted
                 reply_comments_to_delete = self._messages_collection.find({"reply_to_message_id": ObjectId(message_id)})
                 if reply_comments_to_delete != None:
                     for comment_data in reply_comments_to_delete:
