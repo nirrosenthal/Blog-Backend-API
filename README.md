@@ -6,7 +6,6 @@ Backend Design of a Message Blog, allowing to post, edit and delete messages
 - [Installation](#installation)
 - [Design Overview](#design)
 - [Running](#running)
-- [Request Format](#request-format)
 
 ## Key Features
 - Written in Python
@@ -21,23 +20,25 @@ Backend Design of a Message Blog, allowing to post, edit and delete messages
 ## Design Overview
 * DB Considiration
 
-## Requirments
+## Requirment
 1. Docker
 2. Docker Compose
 3. Python
 
-## Running
+## Running:
 1. Go to root diectory of the project
 
-2. Build MongoDB and Flask Images
+2. Build MongoDB and Flask Images:
 ```bash
 docker-compose build -d 
 ```
-3. Run Docker Compose container
+3. Run Docker Compose container:
 ```bash
 docker-compose up -d
 ```
-4. Stop Container Run
+4. Stop Container Run:
 ```bash
 docker-compose down
 ```
+
+
