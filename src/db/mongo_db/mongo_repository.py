@@ -33,9 +33,17 @@ class MongoDBRepository(Repository):
         MONGO_PASSWORD:str = str(os.getenv("SERVER_API_PASSWORD"))
         MONGO_HOST:str = str(os.getenv("MONGO_HOST"))
         MONGO_PORT:str = str(os.getenv("MONGO_PORT"))
-
+        logging.info(f"User: {MONGO_USER}")
+        logging.info(f"Password: {MONGO_PASSWORD}")
+        logging.info(f"Host: {MONGO_HOST}")
+        logging.info(f"Port: {MONGO_PORT}")
         CONNECTION_STRING = f"mongodb://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/"
+        logging.info(f"ConnectionString: {CONNECTION_STRING}")
         cls._client:MongoClient = MongoClient(CONNECTION_STRING)
+        try:
+            cls._client.server_info()
+        except Exception as e:
+            raise DatabaseError("MongoDB Connection Error") from e
         cls._messages_db:Database = cls._client["messages"]
         cls._users_db:Database = cls._client["users"]
         cls._messages_collection:Collection = cls._messages_db["comments"]
@@ -298,7 +306,7 @@ class MongoDBRepository(Repository):
         except BlogAppException as e:
             raise e
         except Exception as e:
-            raise DatabaseError from e
+            raise DatabaseError(e.args[0]) from e
 
         return MongoDBRepository.__user_data_to_user_object(created_user_data)
 
@@ -432,7 +440,7 @@ if __name__=="__main__":
     # mongo.create_user_blog(user_id="user1",name="user1",password="$2b$12$ec8wsNHjZq6gZu7Lqa.SmekrPBLxe/Dl0uQICpPRM/L3dEeAkg8O.",email="user1@gmail.com",roles=["post_user"])
     print(mongo.get_user_blog("user2"))
     # mongo.create_user_blog(user_id="user2",name="user2", password="user2", email="user2@gmail.com", roles=[])
-    mongo.update_user_details_blog(user_id ="user2",password='$2b$12$TqqCf5JQh5W9oXjbqK4oguu/4D9ndD0fTr2ni3qpNvV1Z79nAVgzy')
+    # mongo.update_user_details_blog(user_id ="user2",password='$2b$12$TqqCf5JQh5W9oXjbqK4oguu/4D9ndD0fTr2ni3qpNvV1Z79nAVgzy')
     # mongo.remove_user_role("user1","post_user")
     # print(mongo.get_user_blog("user1"))
     # for post in mongo.get_posts_blog(0,20):

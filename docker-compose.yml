@@ -21,14 +21,14 @@ services:
     ports:
       - ${FLASK_PORT}:${FLASK_PORT}
     environment:
-      MONGO_HOST: ${MONGO_HOST}
+      MONGO_HOST: mongodb
       MONGO_PORT: ${MONGO_PORT}
       SERVER_API_USER: ${SERVER_API_USER}
       SERVER_API_PASSWORD: ${SERVER_API_PASSWORD}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       FLASK_APP: src.server.flask.app
     command: >
-      sh -c "flask init-repository && flask run --host=0.0.0.0"
+      sh -c "flask run --host=0.0.0.0 && flask init-repository"
 
 volumes:
   mongodb_data:

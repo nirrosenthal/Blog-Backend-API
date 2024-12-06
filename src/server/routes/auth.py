@@ -90,11 +90,13 @@ def register():
     """
     user_id:str = request.json.get('user_id','')
     password:str = request.json.get('password','')
+    name:str = request.json.get('name','')
+    email:str = request.json.get('email','')
     roles:List[str] = request.json.get('roles',[])
 
     input_validation.CredentialsValidation(user_id=user_id, password=password)
-    input_validation.RolesValidation(roles)
+    input_validation.RolesValidation(roles=roles)
     hashed_password:str = hash_password(password)
-    repository.SERVER_REPOSITORY.create_user_blog(user_id=user_id, password=hashed_password,roles=roles)
+    repository.SERVER_REPOSITORY.create_user_blog(user_id=user_id, name=name, email=email,password=hashed_password,roles=roles)
 
     return make_response(f'User {user_id} created', 204)

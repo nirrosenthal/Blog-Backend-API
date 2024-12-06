@@ -10,6 +10,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 app:Flask = Flask(__name__)
 login_manager:LoginManager = LoginManager()
+repository.SERVER_REPOSITORY = MongoDBRepository()
 
 @app.route('/')
 def home():
@@ -21,13 +22,13 @@ def home():
 app.register_blueprint(messages_bp, url_prefix='/api/v0/messages')
 app.register_blueprint(auth_bp, url_prefix='/api/v0/auth')
 
-@app.cli.command("init-repository")
-def init_database_repository():
-    """
-    Initiate repository instance to be used across api
-    """
-    repository.SERVER_REPOSITORY = MongoDBRepository()
-    logging.info(f"Database Repository Initiated")
+# @app.cli.command("init-repository")
+# def init_database_repository():
+#     """
+#     Initiate repository instance to be used across api
+#     """
+#     repository.SERVER_REPOSITORY = MongoDBRepository()
+#     logging.info(f"Database Repository Initiated")
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=int(os.getenv("FLASK_PORT", 5000)))
