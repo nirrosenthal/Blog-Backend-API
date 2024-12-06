@@ -18,14 +18,22 @@ def home():
 app.register_blueprint(messages_bp, url_prefix='/api/v0/messages')
 app.register_blueprint(auth_bp, url_prefix='/api/v0/auth')
 
-def init_app():
+
+@app.cli.command("init-repository")
+def init_database_repository():
     repository.SERVER_REPOSITORY = MongoDBRepository()
-    app.run(debug=True,port=os.getenv("FLASK_PORT",5000))
-    logging.info(f"Flask app started running on port {os.getenv('FLASK_PORT')}")
-    return app
+    logging.info(f"Database Repository Initiated")
+#
+#
+# def flask_app_run():
+#     """Custom run command to make sure repository will run first"""
+#     init_database_repository()
+#     app.run(host="0.0.0.0", port=int(os.getenv("FLASK_PORT", 5000)))
+#     logging.info(f"Flask app started running on port {os.getenv('FLASK_PORT')}")
+#     return app
 
 if __name__ == '__main__':
-    init_app()
+    app.run(host="0.0.0.0", port=int(os.getenv("FLASK_PORT", 5000)))
 
 
 
