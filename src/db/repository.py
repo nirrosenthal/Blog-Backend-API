@@ -74,7 +74,7 @@ class Repository(ABC):
     @abstractmethod
     def add_message_like(self, message_id:str, user_id:str)->bool:
         """
-        Add the user_id to the message like list.
+        Add the user_id to message Likes.
         Does not verify user_id.
         No error if user_id exists in like list
         :param message_id: unique identifier for message
@@ -89,7 +89,7 @@ class Repository(ABC):
     @abstractmethod
     def remove_message_like(self, message_id:str, user_id:str)->bool:
         """
-        Remove the user_id to the message like list.
+        Remove the user_id from message Likes
         Does not verify user_id.
         No error if user_id doesn't exist in like list
         :param message_id: unique identifier for message

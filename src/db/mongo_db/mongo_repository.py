@@ -82,7 +82,14 @@ class MongoDBRepository(Repository):
                 reply_to_message_id=str(message_data["reply_to_message_id"]))
 
 
-    def get_posts_blog(self, posts_limit:int, start_index:int = 0, **kwargs)->List[Post]:
+    def get_posts_blog(self, posts_limit:int, start_index:int = 0)->List[Post]:
+        """
+        Get up to posts_limit Post messages from start_index
+        :param posts_limit: post limit for pagination
+        :param start_index: starting post index
+        :return: list of Post objects retrieved from db
+        :raises DatabaseError if db operation fail
+        """
         try:
             query = {"reply_to_message_id": {"$eq": None}}
             posts = self._messages_collection.find(query).skip(start_index).limit(posts_limit)
@@ -93,6 +100,15 @@ class MongoDBRepository(Repository):
         return posts_objects
 
     def get_message_blog(self, message_id:str, user_id_owner:str='') ->Message:
+        """
+        Get message using message_id as document identifier
+        :param message_id: unique identifier for message in db
+        :param user_id_owner: optional unique identifier for user
+        :return:
+        :raises:
+            ResourceNotFoundError if message doesn't exist in db
+            DatabaseError for DB operation fail
+        """
         filter_criteria:dict = {"_id": ObjectId(message_id)}
         if user_id_owner!='':
             filter_criteria["user_id_owner"] = user_id_owner
@@ -113,6 +129,14 @@ class MongoDBRepository(Repository):
 
 
     def create_message_blog(self, content:str, user_id_owner:str, reply_to_message_id:str)->Message:
+        """
+        Create message and return Message object
+        :param content: message text field
+        :param user_id_owner: unique user_id of message creator
+        :param reply_to_message_id: message_id of message being replied
+        :return: Message object with message_id
+        :raises: DatabaseError for DB operation fail
+        """
         new_message = {
             "content": content,
             "user_id_owner": user_id_owner,
@@ -130,6 +154,16 @@ class MongoDBRepository(Repository):
         return MongoDBRepository.__message_data_to_message_object(created_message_data)
 
     def edit_message_blog(self, message_id: str, new_content:str)->Message:
+        """
+        Change message content using update_one command
+        Manually raise Error if message isn't found
+        :param message_id: unique identifier for message
+        :param edited_content: message text field to be updated
+        :return: Message object with edited content
+        :raises:
+            ResourceNotFoundError if message_id doesn't exist in DB
+            DatabaseError for DB operation fail
+        """
         message_id_obj:ObjectId = ObjectId(message_id)
         try:
             update_result:UpdateResult = self._messages_collection.update_one(filter={"_id": message_id_obj},
@@ -149,6 +183,14 @@ class MongoDBRepository(Repository):
 
 
     def delete_message_blog(self, message_id:str)->Union[Message,None]:
+        """
+        Delete message using delete_one command
+        No error if message doesn't exist
+        :param message_id: unique identifier for message
+        :return: Message object of deleted message, or None if already doesn't exist
+        :raises DatabaseError for DB operation fail
+        """
+
         filter_message:dict = {"_id": ObjectId(message_id)}
         message_data:Mapping[str,any] = self._messages_collection.find_one(filter=filter_message)
         if message_data:
@@ -193,10 +235,30 @@ class MongoDBRepository(Repository):
         return True
 
     def add_message_like(self, message_id: str, user_id: str) -> bool:
+        """
+        Add the user_id to message Likes list
+        Does not verify user_id.
+        No error if user_id exists in like list
+        :param message_id: unique identifier for message
+        :param user_id: unique user identifier to add to likes
+        :return: True if operation succeeded
+        :raises
+            DatabaseError for DB operation fail
+        """
         return self.__update_message_like("$push", message_id, user_id)
 
 
     def remove_message_like(self, message_id: str, user_id: str) -> bool:
+        """
+        remove user_id from message Likes property
+        Does not verify user_id.
+        No error if user_id exists in like list
+        :param message_id: unique identifier for message
+        :param user_id: unique user identifier to add to likes
+        :return: True if operation succeeded
+        :raises
+            DatabaseError for DB operation fail
+        """
         return self.__update_message_like("$pull", message_id, user_id)
 
     @staticmethod
@@ -210,6 +272,17 @@ class MongoDBRepository(Repository):
 
 
     def create_user_blog(self, user_id: str,password:str, email:str, name:str, roles:List[str]) -> User:
+        """
+        Add new user to users collection
+        :param user_id: unique identifier for user
+        :param password: hashed password
+        :param email: email address
+        :param name: username
+        :param roles: list of permitted roles for user
+        :return: User object based on created record
+        :raises:
+            DatabaseError for operation fail or if user already exists
+        """
         new_user = {
             "user_id": user_id,
             "password": password,
@@ -230,6 +303,14 @@ class MongoDBRepository(Repository):
         return MongoDBRepository.__user_data_to_user_object(created_user_data)
 
     def get_user_blog(self, user_id: str) -> User:
+        """
+        Find document with user_id field and return User object
+        :param user_id: unique identifier for user
+        :return: User Object with properties from db
+        :raises:
+          DatabaseError for DB operation fail
+          ResourceNotFound for user_id that isn't found
+        """
         filter:dict = {"user_id": user_id}
         try:
             user_data:Mapping[str,any] = self._users_collection.find_one(filter=filter)
@@ -244,6 +325,18 @@ class MongoDBRepository(Repository):
 
 
     def update_user_details_blog(self, user_id: str,password:str = '', email:str = '', name:str= '')->User:
+        """
+        Update fields for user_id with update_one command
+        Default '' value won't be updated
+        :param user_id: unique identifier for user
+        :param password: hashed password
+        :param email: email address
+        :param name: username
+        :return: User object with updated properties
+        :raises:
+            DatabaseError for DB operation fail
+            ResourceNotFound for user_id that isn't found
+        """
         filter:dict = {"user_id": user_id}
         set_dict: dict = {}
         if password!='':
@@ -269,6 +362,13 @@ class MongoDBRepository(Repository):
 
 
     def delete_user_blog(self, user_id: str) -> Union[User,None]:
+        """
+        Delete user from Database with user_id
+        :param user_id: unique identifier for user
+        :return: User obejct of deleted user or None if user is already deleted
+        :raise DatabaseError for DB operation fail
+        """
+
         filter_user:dict = {"user_id": user_id}
         user_data:Mapping[str,any] = self._users_collection.find_one(filter=filter_user)
         if user_data:
@@ -304,9 +404,23 @@ class MongoDBRepository(Repository):
         return True
 
     def add_user_role(self, user_id:str, role:str)->bool:
+        """
+        Add role to user roles list field, no errors if user already has role
+        :param user_id: unique identifier for user
+        :param role: role to add to user roles
+        :return: True if action succeeded
+        :raise: DatabaseError for DB operation fail
+        """
         return self.__update_user_role("$push", user_id, role)
 
     def remove_user_role(self, user_id:str, role:str):
+        """
+        Remove role from user roles list field, no errors if user doesn't have role
+        :param user_id: unique identifier for user
+        :param role: role to add to user roles
+        :return: True if action succeeded
+        :raise: DatabaseError for DB operation fail
+        """
         return self.__update_user_role("$pull", user_id, role)
 
 
