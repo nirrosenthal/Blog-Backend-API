@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb_container
+    ports:
+      - ${MONGO_PORT}:${MONGO_PORT}
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongodb_data:/data/db
+  app:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: flask_container
+    depends_on:
+      - mongodb
+    ports:
+      - ${FLASK_PORT}:${FLASK_PORT}
+    environment:
+      MONGO_HOST: ${MONGO_HOST}
+      SERVER_API_USER: ${SERVER_API_USER}
+      SERVER_API_PASSWORD: ${SERVER_API_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      FLASK_APP: src.server.flask.app
+    command: >
+      sh -c "flask run --host=0.0.0.0 && flask init-repository"
+
+volumes:
+  mongodb_data:
+
