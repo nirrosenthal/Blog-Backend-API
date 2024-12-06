@@ -13,13 +13,19 @@ login_manager:LoginManager = LoginManager()
 
 @app.route('/')
 def home():
-    return "Hello, Flask!"
+    """
+    Default home route
+    """
+    return "Welcome to Blog App home route!"
 
 app.register_blueprint(messages_bp, url_prefix='/api/v0/messages')
 app.register_blueprint(auth_bp, url_prefix='/api/v0/auth')
 
 @app.cli.command("init-repository")
 def init_database_repository():
+    """
+    Initiate repository instance to be used across api
+    """
     repository.SERVER_REPOSITORY = MongoDBRepository()
     logging.info(f"Database Repository Initiated")
 
