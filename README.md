@@ -29,7 +29,7 @@ Backend Design of a Message Blog, allowing to post, edit and delete messages
 ```bash
 docker-compose build
 ```
-3. Run Docker Compose container
+3. Run Docker Compose container (see test/ directory for request examples)
 ```bash
 docker-compose up -d
 ```
