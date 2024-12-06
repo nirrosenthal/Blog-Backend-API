@@ -25,6 +25,10 @@ class MongoDBRepository(Repository):
 
     @classmethod
     def __init_mongo_client(cls):
+        """
+        Create MongoClient and setup databases and collections
+        :return: None
+        """
         MONGO_USER:str = str(os.getenv("SERVER_API_USER"))
         MONGO_PASSWORD:str = str(os.getenv("SERVER_API_PASSWORD"))
         MONGO_HOST:str = str(os.getenv("MONGO_HOST"))
@@ -44,6 +48,11 @@ class MongoDBRepository(Repository):
 
     @staticmethod
     def __message_data_to_message_object(message_data:Mapping[str,any])->Message:
+        """
+        create Post or Comment object from message_data
+        :param message_data: message data from MongoDB
+        :return: Message object representing message
+        """
         if message_data["reply_to_message_id"] is None:
             return MongoDBRepository.__message_data_to_post_object(message_data)
         else:
@@ -51,12 +60,22 @@ class MongoDBRepository(Repository):
 
     @staticmethod
     def __message_data_to_post_object(message_data:Mapping[str,any])->Post:
+        """
+        create Post object from message_data
+        :param message_data: message data from MongoDB
+        :return: Post object representing message
+        """
         return Post(message_id=str(message_data["_id"]), content=message_data["content"],
                     user_id_owner=message_data["user_id_owner"],
                     user_likes=message_data["user_likes"])
 
     @staticmethod
     def __message_data_to_comment_object(message_data:Mapping[str,any])->Comment:
+        """
+        create Comment object from message_data
+        :param message_data: message data from MongoDB
+        :return: Comment object representing message
+        """
         return Comment(message_id=str(message_data["_id"]), content=message_data["content"],
                 user_id_owner=message_data["user_id_owner"],
                 user_likes=message_data["user_likes"],
@@ -148,6 +167,14 @@ class MongoDBRepository(Repository):
                 else MongoDBRepository.__message_data_to_message_object(message_data)
 
     def __update_message_like(self, update_type:str, message_id:str, user_id:str)->bool:
+        """
+        update operation on likes array field of document based on message id
+        :param update_type:  $push or $pull DB operation
+        :param message_id: unique identifier for message_id
+        :param user_id: unique identifier for user that will be added/remove from likes field array
+        :return: True
+        :raises: DatabaseError for MongoDB fail
+        """
         message_id_obj = ObjectId(message_id)
         try:
             update_result:UpdateResult = self._messages_collection.update_one(
@@ -173,6 +200,11 @@ class MongoDBRepository(Repository):
 
     @staticmethod
     def __user_data_to_user_object(user_data:Mapping[str,any]):
+        """
+         create User object from user_data
+        :param user_data: user data from MongoDB
+        :return: User object representing user in database
+        """
         return User(user_id=user_data["user_id"],password=user_data["password"], email=user_data["email"],name=user_data["name"], roles=user_data["roles"])
 
 
@@ -220,7 +252,6 @@ class MongoDBRepository(Repository):
         if name!='':
             set_dict['name'] = name
         update: dict = {"$set": set_dict}
-        print(set_dict)
         try:
             update_result: UpdateResult = (self._users_collection.
                     update_one(filter=filter,update=update,upsert=False))
@@ -248,6 +279,14 @@ class MongoDBRepository(Repository):
             return MongoDBRepository.__user_data_to_user_object(user_data)
 
     def __update_user_role(self,update_type:str, user_id:str, role:str)->bool:
+        """
+        update operation on roles array field of document based on user_id
+        :param update_type: $push or $pull DB operation
+        :param user_id:  unique identifier for user
+        :param role: role that will be added/removed from roles field
+        :return: True
+        :raises: DatabaseError for MongoDB fail
+        """
         try:
             update_result:UpdateResult = self._users_collection.update_one(
                 upsert=False,
