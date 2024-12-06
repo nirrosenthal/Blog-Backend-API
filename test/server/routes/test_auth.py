@@ -42,14 +42,16 @@ def delete_user(user_id:str)->requests.Response:
 
 
 if __name__=="__main__":
+    delete_user("user3")
     # can create posts
     user1,password1,roles1 = "user3","password3",["post_user"]
     response = create_user(user1,password1,roles1)
+    # jwt_token after login
     user1_jwt_token = login(user1,password1).json().get("token")
     print(user1_jwt_token)
     # cannot create posts only comments
-    # user2,password2,role2 = "user2","password2",[]
-    # create_user(user2,password2,role2)
+    user2,password2,role2 = "user2","password2",[]
+    create_user(user2,password2,role2)
 
 
 
